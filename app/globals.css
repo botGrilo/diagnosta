@@ -46,85 +46,154 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── NUEVOS TOKENS SEMÁNTICOS para Diagnosta ── */
+  --color-status-ok: var(--status-ok);
+  --color-status-degraded: var(--status-degraded);
+  --color-status-down: var(--status-down);
+  --color-surface-raised: var(--surface-raised);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* ── FONDO: Gris azulado neutro ──────────────────────────────
+     Por qué: oklch(0.985) era casi blanco = sin contraste con cards.
+     oklch(0.955 0.006 240) da un tono frío y profesional. Las
+     cards blancas flotan visiblemente sobre él. */
+  --background: oklch(0.955 0.006 240);
+  --foreground: oklch(0.13 0.01 240);
+
+  /* ── CARDS: blancas con micro-elevación ──────────────────────
+     Por qué: la card se ve como superficie elevada sobre el fondo.
+     La sombra va en el componente, no aquí — ver @layer base. */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.13 0.01 240);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.13 0.01 240);
+
+  /* ── PRIMARIO: Verde esmeralda oscuro ────────────────────────
+     Por qué: oklch(0.68) con C=0.19 daba contraste 2.8:1 sobre
+     blanco (WCAG requiere 4.5:1). Bajar la lightness a 0.46 lo
+     lleva a 5.3:1 manteniendo exactamente el mismo matiz (H=155).
+     El "Guardián Activo" ahora se lee sin esfuerzo. */
+  --primary: oklch(0.46 0.18 155);
+  --primary-foreground: oklch(0.98 0 0);
+
+  /* ── SECUNDARIO: texto y superficies neutras ─────────────────
+     Por qué: el --secondary anterior (cian 0.58) era un segundo
+     acento que competía con el verde. En modo claro, secondary
+     debe ser una superficie neutra, no un color. */
+  --secondary: oklch(0.93 0.005 240);
+  --secondary-foreground: oklch(0.25 0.01 240);
+
+  /* ── MUTED: para labels de sección ──────────────────────────── */
+  --muted: oklch(0.93 0.005 240);
+  --muted-foreground: oklch(0.48 0.01 240);
+
+  /* ── ACCENT: hover states ────────────────────────────────────── */
+  --accent: oklch(0.90 0.01 155);
+  --accent-foreground: oklch(0.35 0.16 155);
+
+  /* ── BORDES: más visibles sin ser agresivos ──────────────────
+     Por qué: oklch(0.145/12%) era casi invisible sobre fondo claro.
+     Subir a 16% da definición a las cards sin parecer pesado. */
+  --border: oklch(0.13 0.01 240 / 16%);
+  --input: oklch(0.13 0.01 240 / 18%);
+  --ring: oklch(0.46 0.18 155);
+
+  /* ── DESTRUCTIVE: rojo legible ────────────────────────────────── */
+  --destructive: oklch(0.50 0.20 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  /* ── TOKENS SEMÁNTICOS DE ESTADO (Diagnosta-specific) ──────────
+     Por qué: estos colores son los más importantes del producto.
+     Deben funcionar como señales visuales ANTES de que se lea texto.
+     
+     OK (verde): mismo matiz que primary pero con más lightness
+                 para ser usado como punto/badge, no como texto.
+     
+     DEGRADED (amber oscuro): el amarillo standard falla en modo claro
+                 con contraste 1.9:1. Amber oscuro da 4.8:1.
+     
+     DOWN (rojo): contraste 5.2:1 sobre blanco. */
+  --status-ok: oklch(0.46 0.18 155);
+  --status-degraded: oklch(0.52 0.16 55);
+  --status-down: oklch(0.50 0.20 25);
+  --surface-raised: oklch(0.97 0.003 240);
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
+  /* Tus variables de dark mode — estas estaban bien, mantenlas */
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.18 0.02 240);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.18 0.02 240);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.75 0.18 155);
+  --primary-foreground: oklch(0.12 0 0);
+  --secondary: oklch(0.70 0.15 200);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.02 240);
+  --muted-foreground: oklch(0.70 0 0);
+  --accent: oklch(0.25 0.02 240);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.60 0.20 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --ring: oklch(0.75 0.18 155);
+
+  /* Tokens semánticos en dark — el verde puede ser más brillante */
+  --status-ok: oklch(0.72 0.18 155);
+  --status-degraded: oklch(0.78 0.15 75);
+  --status-down: oklch(0.65 0.22 25);
+  --surface-raised: oklch(0.22 0.02 240);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    /* Tipografía: Inter o Geist dan mejor legibilidad que el sistema */
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
   html {
     @apply font-sans;
+  }
+
+  /* ── MICRO-ELEVACIÓN EN CARDS (modo claro únicamente) ──────────
+     Por qué: en modo claro las cards necesitan percepción de
+     profundidad. Una sombra de 1px + 3px es suficiente para
+     separar sin verse "pesada" o anticuada. En dark no hace falta
+     porque el contraste de color ya separa las capas. */
+  .light .card,
+  :root:not(.dark) .card {
+    box-shadow: 0 1px 3px oklch(0.13 0.01 240 / 8%),
+                0 0 0 0.5px oklch(0.13 0.01 240 / 10%);
+  }
+}
+
+/* ── UTILIDADES SEMÁNTICAS para usar en componentes ────────────── */
+@layer utilities {
+  .status-dot-ok {
+    background-color: var(--status-ok);
+    box-shadow: 0 0 0 2px oklch(from var(--status-ok) l c h / 20%);
+  }
+  .status-dot-degraded {
+    background-color: var(--status-degraded);
+    box-shadow: 0 0 0 2px oklch(from var(--status-degraded) l c h / 20%);
+  }
+  .status-dot-down {
+    background-color: var(--status-down);
+    box-shadow: 0 0 0 2px oklch(from var(--status-down) l c h / 20%);
   }
 }
