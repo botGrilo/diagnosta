@@ -4,6 +4,7 @@ import pool from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { signOut } from "@/auth";
 
 const registerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
@@ -11,6 +12,12 @@ const registerSchema = z.object({
   password: z.string().min(8, "Mínimo 8 caracteres"),
 });
 
+//SALIR - Logout
+export async function logoutUser() {
+  await signOut({ redirectTo: "/login" });
+}
+
+// Registrar Usuario
 export async function registerUser(formData: FormData) {
   const parsed = registerSchema.safeParse({
     name: formData.get("name"),
@@ -41,5 +48,8 @@ export async function registerUser(formData: FormData) {
     [name, email, password_hash]
   );
 
-  redirect("/login?registered=1");
+  // En vez de redirigir y romper la UX, devolvemos success para que el Modal reaccione
+  return { success: true };
+
+  //redirect("/login?registered=1");
 }

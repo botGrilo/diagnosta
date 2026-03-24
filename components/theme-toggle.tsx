@@ -7,10 +7,10 @@ import { Sun, Moon } from "lucide-react";
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
-  return (
+    return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="fixed top-4 right-4 z-50 flex items-center justify-center h-9 w-9 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 shadow-sm transition-colors duration-300"
+      className="flex items-center justify-center h-9 w-9 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 shadow-sm transition-colors duration-300"
       aria-label="Cambiar tema"
     >
       {theme === "dark" ? (

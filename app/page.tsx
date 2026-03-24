@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react"; 
 import { Shield, Brain, Globe, Bell, ArrowRight, Play } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AuthModal } from "@/components/auth-modal";
 
 const FEATURES = [
   {
@@ -33,8 +35,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
 
-      {/* Botón de tema — fixed top-right, funciona al ser Client Component interno */}
-      <ThemeToggle />
+     
 
       {/* ── NAVBAR ─────────────────────────────────── */}
       <header className="border-b border-border sticky top-0 z-40 bg-background/80 backdrop-blur-md">
@@ -44,24 +45,13 @@ export default function LandingPage() {
             <span className="text-lg font-bold text-foreground tracking-tight">Diagnosta</span>
           </div>
           <nav className="flex items-center gap-6">
+             {/* Botón de tema */}
+            <ThemeToggle />
             <Link
-              href="/dashboard"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Ver Demo
-            </Link>
-            <Link
-              href="/login"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              href="?auth=login"
+              className="text-sm font-semibold bg-primary text-primary-foreground rounded-lg px-5 py-2 hover:opacity-90 transition-opacity shadow-sm"
             >
               Iniciar Sesión
-            </Link>
-            <Link
-              href="/register"
-              id="nav-cta-register"
-              className="text-sm font-semibold bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:opacity-90 transition-opacity"
-            >
-              Empezar Ahora
             </Link>
           </nav>
         </div>
@@ -96,24 +86,20 @@ export default function LandingPage() {
           <strong className="text-foreground">antes</strong> de que el cliente lo note.
         </p>
 
-        <div className="relative flex items-center gap-4 flex-wrap justify-center">
+                <div className="relative flex flex-col items-center gap-4 justify-center">
           <Link
-            href="/register"
+            href="?auth=register"
             id="cta-empezar"
             className="flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-8 py-3.5 text-base font-bold hover:opacity-90 active:scale-95 transition-all duration-150 shadow-lg shadow-primary/25"
           >
-            Empezar Ahora
+            Empezar Gratis
             <ArrowRight className="h-4 w-4" />
           </Link>
-          <Link
-            href="/dashboard"
-            id="cta-demo"
-            className="flex items-center gap-2 bg-card text-foreground border border-border rounded-xl px-8 py-3.5 text-base font-semibold hover:border-primary/40 transition-colors duration-200"
-          >
-            <Play className="h-4 w-4" />
-            Ver Demo
-          </Link>
+          <p className="text-sm text-muted-foreground">
+            ¿Ya tienes cuenta? <Link href="?auth=login" className="text-foreground hover:underline font-medium">Inicia Sesión</Link>
+          </p>
         </div>
+
       </section>
 
       {/* ── FEATURES ───────────────────────────────── */}
@@ -158,6 +144,13 @@ export default function LandingPage() {
           </nav>
         </div>
       </footer>
+
+      {/* --- INYECCIÓN DEL MODAL --- */}
+      {/* Usamos Suspense porque AuthModal lee los QueryParams, 
+          así no perjudicamos el SEO de la Landing Page */}
+      <Suspense fallback={null}>
+        <AuthModal />
+      </Suspense>
 
     </div>
   );

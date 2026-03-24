@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Activity, Shield, Brain, Terminal, Zap, Sun, Moon, Settings } from "lucide-react";
+import { LogoutButton } from "@/components/logout-button";
+
 
 const LOG_ENTRIES = [
   { time: "11:20 AM", speaker: "Diagnosta", speakerType: "diagnosta" as const, icon: "🛡️", message: "Detectada latencia inusual en el nodo Barcelona." },
@@ -142,8 +144,9 @@ export default function DashboardPage() {
             <Shield className="text-primary h-7 w-7" />
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Diagnosta</h1>
           </div>
-          <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
             <ThemeToggle />
+            
             {/* Enlace directo a gestión de endpoints */}
             <Link
               href="/dashboard/endpoints"
@@ -152,14 +155,19 @@ export default function DashboardPage() {
               <Settings className="h-3.5 w-3.5" />
               Endpoints
             </Link>
-            <div className="flex items-center gap-2 bg-card border border-border rounded-full px-4 py-1.5">
+
+            {/* Inyectamos el componente puro de Logout */}
+            <LogoutButton />
+
+            {/* Badge visual de protección activa - minimizado a un simple ícono para limpiar la interfaz */}
+            <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/10 border border-primary/20" title="Protección de endpoints activa">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
               </span>
-              <span className="text-xs font-semibold text-primary tracking-wide">Guardián Activo</span>
             </div>
           </div>
+
         </header>
 
         {/* ── HERO CARD: Uptime Global ─────────────────── */}
