@@ -52,3 +52,8 @@ ehthumbs.db
 
 # Logs de Antigravity o agentes
 *.log
+
+# Schema SQL local (no debe ir al repo público)
+*.sql
+# Archivos de Docker local
+docker-compose.override.yml

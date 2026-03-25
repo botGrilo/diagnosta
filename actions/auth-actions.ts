@@ -3,8 +3,8 @@
 import pool from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
+import { seedNewUser } from "@/lib/seed-user";
 
 const registerSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(100),
@@ -43,10 +43,18 @@ export async function registerUser(formData: FormData) {
   // Hash de 12 rondas — balance seguridad/velocidad
   const password_hash = await bcrypt.hash(password, 12);
 
-  await pool.query(
-    "INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3)",
-    [name, email, password_hash]
+  // Autogenerar username temporal para la tabla (requerido por Schema V5)
+  const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + Math.floor(Math.random() * 10000);
+
+  const insertResult = await pool.query(
+    "INSERT INTO users (name, email, username, password_hash) VALUES ($1, $2, $3, $4) RETURNING id",
+    [name, email, username, password_hash]
   );
+
+  const newUserId = insertResult.rows[0].id;
+
+  // Lógica de seed asíncrona (NO USAR AWAIT - Promesa en background para no frenar la UX al usuario)
+  seedNewUser(newUserId).catch(console.error);
 
   // En vez de redirigir y romper la UX, devolvemos success para que el Modal reaccione
   return { success: true };

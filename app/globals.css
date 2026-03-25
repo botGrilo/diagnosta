@@ -197,3 +197,9 @@
     box-shadow: 0 0 0 2px oklch(from var(--status-down) l c h / 20%);
   }
 }
+
+/* Evita el desplazamiento horizontal cuando el scrollbar 
+   desaparece al abrir modales o dropdowns */
+html {
+  scrollbar-gutter: stable;
+}

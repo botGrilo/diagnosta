@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react"; 
-import { Shield, Brain, Globe, Bell, ArrowRight, Play } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { AuthModal } from "@/components/auth-modal";
+import { Shield, Brain, Globe, Bell, ArrowRight } from "lucide-react";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AuthModal } from "@/components/layout/auth-modal";
+import { auth } from "@/auth"; 
+import { redirect } from "next/navigation";
 
 const FEATURES = [
   {
@@ -31,7 +33,12 @@ const FEATURES = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await auth();
+  if (session?.user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
 

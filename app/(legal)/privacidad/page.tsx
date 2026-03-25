@@ -13,14 +13,6 @@ export default function PrivacidadPage() {
     <div className="min-h-screen bg-background">
       <article className="max-w-prose mx-auto py-20 px-6 font-sans">
 
-        {/* Navegación de retorno */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors mb-10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver al Dashboard
-        </Link>
 
         {/* Cabecera */}
         <header className="mb-10 border-b border-border pb-6">
@@ -132,27 +124,6 @@ export default function PrivacidadPage() {
 
         </div>
 
-        {/* Footer de la página legal */}
-        <footer className="mt-16 pt-6 border-t border-border flex items-center justify-between flex-wrap gap-4">
-          <p className="text-xs text-muted-foreground">
-            © 2026 Diagnosta · Proyecto de Hackatón
-          </p>
-          <nav className="flex items-center gap-4">
-            <Link
-              href="/aviso-legal"
-              className="text-xs text-muted-foreground hover:text-secondary transition-colors"
-            >
-              Aviso Legal
-            </Link>
-            <span className="text-border">·</span>
-            <Link
-              href="/cookies"
-              className="text-xs text-muted-foreground hover:text-secondary transition-colors"
-            >
-              Cookies
-            </Link>
-          </nav>
-        </footer>
 
       </article>
     </div>

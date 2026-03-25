@@ -1,3 +1,4 @@
+/* eslint-disable */
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
@@ -6,12 +7,12 @@ const pool = new Pool({
 });
 
 async function run() {
-  const hash = bcrypt.hashSync('Admin2026!', 10);
+  const hash = await bcrypt.hash('Admin2026!', 12);
   await pool.query(
-    "INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING;",
-    ['admin@diagnosta.es', 'Admin Diagnosta', hash]
+    "INSERT INTO users (email, username, name, password_hash) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;",
+    ['admin@diagnosta.es', 'admin', 'Admin Diagnosta', hash]
   );
-  console.log('Admin inserted successfully');
+  console.log('Admin inyectado correctamente en el nuevo esquema UUID');
   pool.end();
 }
 

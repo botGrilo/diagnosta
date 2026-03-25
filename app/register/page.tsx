@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { registerUser } from "@/actions/auth-actions";
 import Link from "next/link";
 import { Shield, Loader2 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default function RegisterPage() {
   const [error,   setError]        = useState<string | null>(null);

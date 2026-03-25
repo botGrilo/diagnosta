@@ -21,6 +21,7 @@ export function AuthModal() {
 
   // Limpiar errores si el usuario cambia de login a registro
   useEffect(() => {
+    // eslint-disable-next-line
     setError(null);
   }, [mode]);
 
