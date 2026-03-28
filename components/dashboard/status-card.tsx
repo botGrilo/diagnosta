@@ -36,14 +36,20 @@ export function StatusCard({
   return (
     <div 
       className={cn(
-        "group relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-card/30 backdrop-blur-2xl p-5 md:p-10",
-        "transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
-        "hover:scale-[1.03] hover:-translate-y-3",
-        isCriticalIA ? "border-uci/60 shadow-[0_40px_80px_-20px_rgba(239,68,68,0.3)] shadow-uci/20" : "hover:border-primary/60 hover:shadow-[0_40px_80px_-20px_rgba(0,242,255,0.2)]",
-        // REGLA 2 y 5: Distribución vertical uniforme y altura consistente
-        "cursor-pointer active:scale-95 flex flex-col justify-between min-h-[380px]",
-        isReference && "border-l-[12px] border-l-primary/20",
-        !isReference && "border-l-[12px] border-l-atleta/20"
+        "group relative overflow-hidden",
+        "flex flex-col justify-between",
+        "min-h-[280px] md:min-h-[380px]",
+        "rounded-2xl md:rounded-[2.5rem]",
+        "border border-border/40",
+        "bg-card/30 backdrop-blur-sm md:backdrop-blur-2xl",
+        "p-5 md:p-10",
+        "transition-all duration-700",
+        "md:hover:scale-[1.03] md:hover:-translate-y-3",
+        isCriticalIA 
+          ? "border-uci/60 md:shadow-[0_40px_80px_-20px_rgba(239,68,68,0.3)]" 
+          : "md:hover:border-primary/60 md:hover:shadow-[0_40px_80px_-20px_rgba(0,242,255,0.2)]",
+        "cursor-pointer active:scale-95",
+        isReference ? "border-l-4 border-l-primary/20" : "border-l-4 border-l-atleta/20"
       )}
       onClick={onClick}
     >
@@ -84,7 +90,7 @@ export function StatusCard({
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   {/* REGLA 3: Truncado estricto del nombre */}
-                  <h3 className="font-black text-[1.6rem] text-foreground group-hover:text-primary transition-colors tracking-tighter leading-tight truncate max-w-[140px]">
+                  <h3 className="font-black text-xl md:text-[1.6rem] text-foreground tracking-tight md:tracking-tighter truncate max-w-[140px] md:max-w-[160px]">
                     {name}
                   </h3>
                   {isReference && (

@@ -149,7 +149,7 @@ export function StatusGrid() {
       {showGlobal && (
         <section className="space-y-10">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-xl font-black uppercase tracking-[0.1em] md:tracking-[0.3em] text-primary flex items-center gap-4 italic shrink-0">
+            <h3 className="text-base md:text-xl font-black uppercase tracking-tight md:tracking-[0.3em] text-primary flex items-center gap-4 italic shrink-0">
               <Globe className="h-6 w-6" /> Pilares Globales
             </h3>
             <div className="flex items-center gap-8">
@@ -158,7 +158,7 @@ export function StatusGrid() {
                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 hidden xs:block">6 nodos de infraestructura crítica</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 auto-rows-fr">
             {globalData?.map((endpoint: any) => (
               <StatusCard
                 key={endpoint.id}
@@ -178,7 +178,7 @@ export function StatusGrid() {
       {/* ── SECCIÓN 2: TUS NODOS VIGILADOS (SENSOR + DIAGNÓSTICO) ────────────────────────── */}
       <section className="space-y-10">
         <div className="flex items-center justify-between px-2">
-          <h3 className="text-xl font-black uppercase tracking-[0.1em] md:tracking-[0.3em] text-atleta flex items-center gap-4 italic">
+          <h3 className="text-base md:text-xl font-black uppercase tracking-tight md:tracking-[0.3em] text-atleta flex items-center gap-4 italic">
             <Activity className="h-6 w-6" /> Tus Nodos Vigilados
           </h3>
           <div className="flex items-center gap-6">
@@ -208,7 +208,7 @@ export function StatusGrid() {
           </div>
         ) : (
           /* GRID DE CARDS */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 auto-rows-fr">
             {mineData?.map((endpoint: any) => (
               <StatusCard
                 key={endpoint.id}

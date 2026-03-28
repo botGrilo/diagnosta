@@ -103,13 +103,13 @@ export function RegistrationSheet({ isOpen, onClose, onSuccess, endpoint }: Regi
       <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className={cn(
-        "relative w-full max-w-md h-full bg-card border-l border-border/40 shadow-2xl flex flex-col p-8 transition-transform duration-500",
+        "relative w-full md:max-w-md h-full bg-card border-l border-border/40 shadow-2xl flex flex-col p-5 md:p-8 transition-transform duration-500",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
         
         <div className="flex items-center justify-between mb-10">
            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-primary font-black uppercase tracking-[0.2em] text-[10px]">
+              <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs">
                  <Shield className="h-4 w-4" />
                  <span>Gestión Dr. Grilo</span>
               </div>
