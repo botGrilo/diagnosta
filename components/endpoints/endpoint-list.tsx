@@ -1,9 +1,10 @@
 "use client";
 
 import useSWR from "swr";
-import { Trash2, Eye, EyeOff, Loader2, Globe, MoreVertical } from "lucide-react";
+import { Trash2, Eye, EyeOff, Loader2, Globe, MoreVertical, Activity, Terminal } from "lucide-react";
 import { deleteEndpoint } from "@/actions/endpoint-actions";
 import type { EndpointSummary } from "@/types/diagnosta";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,64 +28,111 @@ export function EndpointList() {
   }
 
   return (
-    <section>
+    <section className="space-y-6 animate-in fade-in slide-in-from-right duration-700 h-fit">
+      
+      <div className="flex items-center justify-between px-2">
+         <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_currentColor]" />
+            <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-muted-foreground/60 italic">
+               Matriz de vigilancia ({endpoints?.length || 0})
+            </h3>
+         </div>
+         {isLoading && <Loader2 className="h-3 w-3 animate-spin text-primary/50" />}
+      </div>
+
       {isLoading ? (
-        <div className="bg-card border border-border rounded-2xl h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground w-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-          <p>Reuniendo métricas forenses...</p>
+        <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] h-96 flex flex-col items-center justify-center gap-6 text-muted-foreground/30 w-full backdrop-blur-md">
+          <Activity className="h-10 w-10 animate-pulse text-primary/20" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] font-mono">Sincronizando Nodos...</p>
         </div>
       ) : endpoints?.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl p-12 text-center shadow-sm">
-          <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium">No hay APIs registradas</h3>
-          <p className="text-sm text-muted-foreground mt-1">Registra tu primer monitor usando el formulario de la izquierda.</p>
+        <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-16 text-center backdrop-blur-md space-y-4">
+          <Globe className="h-16 w-16 text-muted-foreground mx-auto opacity-10" />
+          <div className="space-y-1">
+             <h3 className="text-xl font-black italic tracking-tighter text-foreground/40">Silencio Total</h3>
+             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/30">Sin telemetría activa en este sector.</p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-4">
           {endpoints?.map((ep: EndpointSummary) => {
-            const statusColor = ep.isSuccess === false ? "status-dot-down" 
-                              : (ep.latencyMs && ep.latencyMs > 2000) ? "status-dot-degraded" 
-                              : ep.statusCode ? "status-dot-ok" : "bg-muted";
+            const isDown = ep.isSuccess === false;
+            const isDegraded = ep.latencyMs && ep.latencyMs > 1000;
 
             return (
-              <div key={ep.id} className="group bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm hover:border-primary/30 transition-all duration-200">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${statusColor}`} />
+              <div 
+                key={ep.id} 
+                className="group relative bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 hover:border-primary/20 rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all duration-500 shadow-xl overflow-hidden"
+              >
+                {/* Indicador de Estado SRE (Look de hardware) */}
+                <div className={cn(
+                  "absolute top-0 left-0 w-1.5 h-full opacity-60 group-hover:opacity-100 transition-opacity",
+                  isDown ? "bg-uci" : isDegraded ? "bg-amber-500" : "bg-atleta"
+                )} />
+
+                <div className="flex items-center gap-6 min-w-0 flex-1">
+                  <div className={cn(
+                    "flex-shrink-0 h-10 w-10 rounded-2xl flex items-center justify-center border border-white/5 bg-white/[0.03]",
+                    isDown ? "text-uci/60" : "text-atleta/60"
+                  )}>
+                     <Terminal className="h-5 w-5" />
+                  </div>
                   
-                  <div className="min-w-0">
-                    <h4 className="font-semibold text-foreground truncate">{ep.name}</h4>
-                    <p className="text-xs text-muted-foreground truncate opacity-80 mt-0.5 max-w-[200px] sm:max-w-sm">{ep.url}</p>
+                  <div className="min-w-0 space-y-1">
+                    <h4 className="font-extrabold text-lg text-foreground tracking-tighter group-hover:text-primary transition-colors truncate">
+                       {ep.name}
+                    </h4>
+                    <div className="flex items-center gap-2 opacity-40">
+                       <span className="text-[10px] font-mono uppercase font-black tracking-widest">{ep.method}</span>
+                       <span className="h-px w-2 bg-white/20" />
+                       <span className="text-[10px] font-mono lowercase truncate font-bold">{ep.url}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 shrink-0 pl-4">
-                  <div className="hidden sm:flex items-center gap-3">
-                    <span className="text-[10px] font-bold px-2 py-1 bg-secondary text-secondary-foreground rounded-md uppercase tracking-wide">
-                      {ep.method}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-1 bg-secondary text-secondary-foreground rounded-md opacity-80">
-                      {ep.checkIntervalMin}m
-                    </span>
+                <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end bg-white/[0.02] sm:bg-transparent p-4 sm:p-0 rounded-2xl border border-white/5 sm:border-none">
+                  
+                  <div className="flex items-center gap-6">
+                    <div className="text-right flex flex-col items-end">
+                       <p className={cn(
+                         "text-xl font-black italic tabular-nums leading-none tracking-tight",
+                         isDown ? "text-uci" : isDegraded ? "text-amber-500" : "text-atleta"
+                       )}>
+                          {ep.latencyMs ? `${ep.latencyMs}ms` : '--'}
+                       </p>
+                       <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mt-1 italic">
+                          Ritmo: {ep.checkIntervalMin}m
+                       </p>
+                    </div>
+
+                    <div className="w-px h-8 bg-white/5 hidden md:block" />
+
                     {ep.isPublic ? (
-                      <Eye className="h-4 w-4 text-primary" />
+                      <div className="flex flex-col items-center gap-1 group/eye cursor-help">
+                        <Eye className="h-4 w-4 text-primary animate-pulse" />
+                        <span className="text-[7px] font-black uppercase tracking-tighter text-primary/40">Visible</span>
+                      </div>
                     ) : (
-                      <EyeOff className="h-4 w-4 text-muted-foreground opacity-50" />
+                      <div className="flex flex-col items-center gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-[7px] font-black uppercase tracking-tighter">Oculto</span>
+                      </div>
                     )}
                   </div>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="p-2 h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-ring">
-                        <MoreVertical className="h-4 w-4" />
+                      <button className="h-10 w-10 flex items-center justify-center bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 text-muted-foreground hover:text-foreground rounded-xl transition-all active:scale-90 outline-none">
+                        <MoreVertical className="h-5 w-5" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-card">
+                    <DropdownMenuContent align="end" className="bg-[#050505] border-white/10 rounded-2xl p-2 min-w-[180px] shadow-2xl">
                       <DropdownMenuItem
-                        className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                        className="text-uci focus:bg-uci/10 focus:text-uci cursor-pointer p-3 rounded-xl font-bold text-xs uppercase tracking-widest"
                         onClick={() => handleDelete(ep.id)}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar Monitor
+                        <Trash2 className="h-4 w-4 mr-3" />
+                        Borrar Registro
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -1,117 +1,79 @@
-"use client";
+"use client"
 
-import useSWR from "swr";
-import { Activity, Zap, Terminal  } from "lucide-react";
+import { StatusGrid } from "@/components/dashboard/status-grid"
+import { NeuralConsole } from "@/components/dashboard/neural-console"
+import { Activity, Shield, LayoutDashboard, Terminal } from "lucide-react"
 
-import type { EndpointSummary } from "@/types/diagnosta";
-
-import { MonitorCard, MonitorCardSkeleton } from "@/components/dashboard/monitor-card";
-import { NeuralConsole } from "@/components/dashboard/neural-console";
-
-function UptimeChart() {
-  const points = "0,60 40,55 80,58 120,50 160,52 200,48 240,53 280,49 320,51 360,47 400,50";
-  return (
-    <svg viewBox="0 0 400 80" className="w-full h-16 mt-3" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="uptimeGradient" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="oklch(0.75 0.18 155)" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="oklch(0.75 0.18 155)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,60 ${points} 400,60 400,80 0,80`} fill="url(#uptimeGradient)" />
-      <polyline points={points} fill="none" stroke="oklch(0.75 0.18 155)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-
+/**
+ * Dashboard Maestro de Diagnosta
+ * Versión Modular v2.0 - Optimizado para el Hackathon
+ */
 export default function DashboardPage() {
-  const { data: endpoints } = useSWR("/api/endpoints", fetcher, { refreshInterval: 30000 });
-
-  let nominales = 0;
-  let degradados = 0;
-  let caidos = 0;
-
-  if (endpoints?.length) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    endpoints.forEach((ep: any) => {
-      if (ep.isSuccess === false) caidos++;
-      else if (ep.latencyMs && ep.latencyMs > 2000) degradados++;
-      else if (ep.statusCode) nominales++;
-    });
-  }
-  const topEndpoints = endpoints?.slice(0, 3) ?? [];
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 w-full px-6 py-8">
-
-        
+    <div className="min-h-screen bg-background relative overflow-hidden">
       
+      {/* ── ELEMENTOS DE FONDO (Cyber Skin) ─────────────────── */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-10">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/10 blur-[100px] rounded-full" />
+      </div>
 
-        {/* ── HERO CARD: Uptime Global ─────────────────── */}
-        <div className="bg-card border border-border rounded-xl p-5 md:p-7 shadow-sm">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-xs font-medium text-foreground/60 mb-1">Estado Global del Sistema</p>
-              <p className="text-6xl font-bold tracking-tight leading-none tabular-nums text-foreground">99.98%</p>
-              
-              <div className="flex items-center gap-2 mt-3 mb-1">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> {nominales} Nominales
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> {degradados} Degradados
-                </span>
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold uppercase tracking-wider bg-destructive/10 text-destructive border border-destructive/20">
-                  <span className="h-1.5 w-1.5 rounded-full bg-destructive" /> {caidos} Caídos
-                </span>
-              </div>
-
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mt-2">↑ Uptime Global — últimos 30 días</p>
+      <div className="max-w-7xl mx-auto flex flex-col gap-8 w-full px-6 py-10 relative z-10">
+        
+        {/* ── HEADER DEL DASHBOARD: ESCALA SRE ────────────────────────────── */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-3 border-b-2 border-border/20">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 text-atleta/90 font-black uppercase tracking-[0.3em] text-[11px]">
+              <Shield className="h-6 w-6" />
+              <span>Infraestructura Crítica</span>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Activity className="h-5 w-5 text-primary" />
-              <span className="text-xs font-mono">Tiempo Real</span>
-            </div>
+            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-foreground flex items-center gap-4">
+              Panel de <span className="text-atleta italic underline decoration-atleta/20 underline-offset-8">Control</span>
+            </h1>
+            <p className="text-base text-muted-foreground font-bold tracking-tight">
+              Telemetría extremo a extremo (Capa 7) — incluyendo ciclo completo de seguridad SSL y latencia de procesamiento.
+            </p>
           </div>
-          <UptimeChart />
+        </header>
+
+        {/* CONTEXT BOX XL: LA DEFENSA TÉCNICA */}
+        <div className="bg-atleta/5 border-l-[6px] border-atleta p-6 rounded-r-3xl backdrop-blur-md animate-in fade-in slide-in-from-left duration-1000 shadow-[20px_0_40px_-20px_rgba(0,242,255,0.1)]">
+           <p className="text-[14px] font-black text-atleta uppercase tracking-[0.25em] mb-3 flex items-center gap-2">
+             <Activity className="h-4 w-4" />
+             ¿Qué mide cada número?
+           </p>
+           <p className="text-[13px] md:text-sm text-foreground/90 leading-relaxed font-bold max-w-4xl">
+             Captura del ciclo <span className="text-atleta underline decoration-atleta/30 underline-offset-2">TCP + Negociación TLS/SSL + respuesta del servidor + transferencia</span>. <br className="hidden md:block"/>
+             El mínimo físico de HTTPS es ~300 ms. Un resultado de <span className="text-atleta font-black text-lg">340 ms</span> es <span className="bg-atleta/20 px-2 py-0.5 rounded text-atleta">CONEXIÓN ÓPTIMA</span> — no es lag, es seguridad.
+           </p>
         </div>
 
-        {/* ── GRID DE MONITORES ───────────────────────── */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Monitores de Servicio</h2>
+
+        {/* ── GRID DE MONITOREO (EL MOTOR SWR) ────────────────── */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4 text-primary" />
+            <h2 className="text-xs font-mono text-primary font-bold uppercase tracking-[0.2em] py-1 border-b-2 border-primary/20">
+              Pilares de Internet
+            </h2>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             {topEndpoints.length === 0
-               ? Array(3).fill(0).map((_, i) => (
-                   <MonitorCardSkeleton key={i} />
-                 ))
-               : topEndpoints.map((ep: EndpointSummary) => (
-                   <MonitorCard key={ep.id} ep={ep} />
-                 ))
-             }
-           </div>
-
-
+          <StatusGrid />
         </section>
 
-        {/* ── CONSOLA NEURONAL ────────────────────────── */}
-        <section>
-          <div className="flex items-center gap-2 mb-3">
+        {/* ── CONSOLA NEURONAL (INTELIGENCIA ARTIFICIAL) ───────── */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
             <Terminal className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Análisis en Progreso</h2>
+             <h2 className="text-xs font-mono text-muted-foreground font-bold uppercase tracking-[0.2em]">
+              Análisis del Sistema (Neural Console)
+            </h2>
           </div>
-          <NeuralConsole />
+          <div className="rounded-2xl border border-border/40 overflow-hidden shadow-2xl shadow-primary/5">
+            <NeuralConsole />
+          </div>
         </section>
 
       </div>
-
-      
     </div>
-  );
+  )
 }

@@ -33,6 +33,8 @@ const FEATURES = [
   },
 ];
 
+import { GlobalStatusWidget } from "@/components/layout/global-status-widget";
+
 export default async function LandingPage() {
   const session = await auth();
   if (session?.user) {
@@ -44,25 +46,7 @@ export default async function LandingPage() {
 
      
 
-      {/* ── NAVBAR ─────────────────────────────────── */}
-      <header className="border-b border-border sticky top-0 z-40 bg-background/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold text-foreground tracking-tight">Diagnosta</span>
-          </div>
-          <nav className="flex items-center gap-6">
-             {/* Botón de tema */}
-            <ThemeToggle />
-            <Link
-              href="?auth=login"
-              className="text-sm font-semibold bg-primary text-primary-foreground rounded-lg px-5 py-2 hover:opacity-90 transition-opacity shadow-sm"
-            >
-              Iniciar Sesión
-            </Link>
-          </nav>
-        </div>
-      </header>
+
 
       {/* ── HERO ───────────────────────────────────── */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-6 py-28 gap-8 relative overflow-hidden">
@@ -109,6 +93,11 @@ export default async function LandingPage() {
 
       </section>
 
+      {/* ── LIVE STATUS WIDGET ──────────────────────── */}
+      <section className="px-6 py-12">
+        <GlobalStatusWidget />
+      </section>
+
       {/* ── FEATURES ───────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pb-28 w-full">
         <div className="text-center mb-12">
@@ -136,21 +125,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ─────────────────────────────────── */}
-      <footer className="border-t border-border bg-card/50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            © 2026 Diagnosta — Hackatón CubePath
-          </p>
-          <nav className="flex items-center gap-4" aria-label="Legal">
-            <Link href="/aviso-legal" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Aviso Legal</Link>
-            <span className="text-border">·</span>
-            <Link href="/privacidad" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Privacidad</Link>
-            <span className="text-border">·</span>
-            <Link href="/cookies" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cookies</Link>
-          </nav>
-        </div>
-      </footer>
+
 
       {/* --- INYECCIÓN DEL MODAL --- */}
       {/* Usamos Suspense porque AuthModal lee los QueryParams, 

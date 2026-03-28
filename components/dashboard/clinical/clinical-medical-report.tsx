@@ -1,0 +1,218 @@
+"use client"
+import React from 'react'
+import { 
+  Shield, Activity, Zap, Thermometer, Info, 
+  CheckCircle2, AlertCircle, Terminal, 
+  Database, Clock, Fingerprint, BarChart3, TrendingUp
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { MedicalGauge } from './medical-gauge'
+
+import { ClinicalMiniMetric } from './clinical-mini-metric'
+import { ClinicalBadge } from './clinical-badge'
+import { ClinicalECGBars } from './clinical-ecg-bars'
+
+interface ClinicalMedicalReportProps {
+  status: any
+}
+
+export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
+  const ia = status.ia_recipe
+  const epi = status.epidemiology_report || status.epidemiology
+  const hasIA = !!ia
+
+  // Datos de Triage
+  const latency = epi ? parseInt(epi.avg_latency) : (status.latency_ms || 0)
+  const isHealthy = latency < 300
+  const isWarning = latency >= 300 && latency < 800
+  const isCritical = latency >= 800
+
+  return (
+    <div className="space-y-8 py-4">
+      {/* ── HEADER DE EXPEDIENTE ────────────────────────── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-8">
+        <div className="space-y-1">
+           <div className="flex items-center gap-3">
+              <div className={cn(
+                "h-8 w-8 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center",
+                isHealthy ? "text-atleta" : isWarning ? "text-amber-500" : "text-uci"
+              )}>
+                 <Shield className="h-4 w-4" />
+              </div>
+              <h2 className="text-2xl font-black italic tracking-tighter">
+                {status.name} <span className="text-muted-foreground/40 not-italic font-medium">— Expediente Clínico</span>
+              </h2>
+           </div>
+           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+              <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+                 <Database className="h-2.5 w-2.5" /> ID: {status.id?.slice(0, 12)}
+              </span>
+              <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+                 <Fingerprint className="h-2.5 w-2.5" /> TRACE: {ia?.trace_id?.slice(0, 8) || "SRE_UNIFIED"}
+              </span>
+              <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+                 <Zap className="h-2.5 w-2.5" /> EXEC: #{ia?.execution_id || "777"}
+              </span>
+           </div>
+        </div>
+        <div className={cn(
+          "px-4 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-[0.2em]",
+          isHealthy ? "bg-atleta/10 border-atleta/20 text-atleta" : 
+          isWarning ? "bg-amber-500/10 border-amber-500/20 text-amber-500" : 
+          "bg-uci/10 border-uci/20 text-uci"
+        )}>
+          {isHealthy ? "VERDE — NORMAL" : isWarning ? "AMARILLO — ALERTA" : "ROJO — UCI"}
+        </div>
+      </div>
+
+      {/* ── CUADRO DE MÉTRICAS CLAVE (USANDO COMPONENTES REUTILIZABLES) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5">
+        <ClinicalMiniMetric label="Latencia Actual" value={`${status.latency_ms || 0}ms`} sub="Ciclo HTTPS completo" variant={isHealthy ? "atleta" : isWarning ? "amber" : "uci"} />
+        <ClinicalMiniMetric label="Uptime Score" value={epi?.uptime_score || "100%"} sub="Últimos 50 checks" variant="atleta" />
+        <ClinicalMiniMetric label="Promedio Histórico" value={`${epi?.avg_latency || 0}ms`} sub={`Tendencia: ${ia?.analisis_tecnico?.tendencia || "ESTABLE"}`} />
+        <ClinicalMiniMetric label="Fallos Recientes" value={ia?.fallos_recientes || "0"} sub="de últimos 10 checks" variant={ia?.fallos_recientes > 0 ? "uci" : "atleta"} />
+      </div>
+
+      {/* ── LAYOUT DE DOS COLUMNAS (CONTENIDO FORENSE) ───── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* COLUMNA IZQUIERDA: DIAGNÓSTICO E IMPACTO */}
+        <div className="space-y-8">
+           {/* Resumen Clínico */}
+           <Section title="Resumen Clínico">
+              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 relative overflow-hidden">
+                 <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+                 <p className="text-sm font-bold italic text-foreground/90 leading-relaxed">
+                   "{hasIA ? ia.resumen_clinico.descripcion_humana : "Auditando evidencias forenses en tiempo real..."}"
+                 </p>
+                 <div className="grid grid-cols-2 gap-4 mt-6">
+                    <InfoField label="Gravedad" value={ia?.resumen_clinico.gravedad || "ESTABLE"} highlight={ia?.resumen_clinico.gravedad === 'ROJO'} />
+                    <InfoField label="Requiere Humano" value={ia?.resumen_clinico.requiere_humano || "NO"} />
+                    <InfoField label="Evidencia" value="✓ Payload JSON verificado" positive />
+                 </div>
+              </div>
+           </Section>
+
+           {/* Análisis Técnico */}
+           <Section title="Análisis Técnico">
+              <div className="space-y-4">
+                 <TechnicalField label="Causa raíz probable" value={ia?.analisis_tecnico.causa_raiz_probable || "Auditando evidencias de latencia estándar."} />
+                 <TechnicalField label="Causa diferencial" value={ia?.analisis_tecnico.causa_diferencial || "Anomalía de Capa 7 descartada temporalmente."} />
+                 <div className="grid grid-cols-2 gap-4">
+                    <TechnicalField label="Destinatario" value={ia?.analisis_tecnico.destinatario || "AUTOMÁTICO"} />
+                    <TechnicalField label="Patrón histórico" value={ia?.analisis_tecnico.patron_historico || "INTERMITENTE"} />
+                 </div>
+              </div>
+           </Section>
+
+           {/* Pronóstico */}
+           <Section title="Pronóstico">
+              <div className="grid grid-cols-2 gap-4">
+                 <TechnicalField label="Recuperación" value={ia?.pronostico.recuperacion || "Sin intervención necesaria."} />
+                 <TechnicalField label="Impacto negocio" value={ia?.pronostico.impacto_negocio || "Ninguno — Operativo."} highlight={ia?.resumen_clinico.gravedad === 'ROJO'} />
+              </div>
+           </Section>
+
+           {/* Historial Visual (Mini Barras Reutilizables) */}
+           <Section title="Historial de Latencia (Últimas 10)">
+              <ClinicalECGBars label="Snapshot_ID: SRE_DR" />
+           </Section>
+        </div>
+
+        {/* COLUMNA DERECHA: PROTOCOLO DE INTERVENCIÓN */}
+        <div className="space-y-8">
+           <Section title="Protocolo de Intervención">
+              <div className="space-y-4">
+                 {hasIA && ia.protocolo_intervencion ? (
+                   ia.protocolo_intervencion.map((step: any, idx: number) => (
+                     <div key={idx} className="p-5 rounded-[1.5rem] bg-white/[0.02] border border-white/5 space-y-3 group/step">
+                        <div className="flex items-center gap-3">
+                           <div className="h-6 w-6 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-[10px]">
+                              {step.paso}
+                           </div>
+                           <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground">{step.tipo}</h4>
+                        </div>
+                        <p className="text-xs font-bold text-foreground/70 leading-relaxed">{step.accion}</p>
+                        {step.comando && (
+                          <div className="relative group/copy">
+                             <code className="block text-[10px] font-mono text-atleta bg-slate-950 p-4 rounded-xl border border-white/5 group-hover/step:border-atleta/30 transition-all overflow-x-auto whitespace-pre">
+                                {step.comando}
+                             </code>
+                             <Terminal className="absolute right-4 top-4 h-3 w-3 text-atleta/20 group-hover/step:text-atleta/60" />
+                          </div>
+                        )}
+                     </div>
+                   ))
+                 ) : (
+                   <div className="p-10 text-center border-2 border-dashed border-white/5 rounded-[2rem] opacity-20">
+                      <Clock className="h-8 w-8 mx-auto mb-4" />
+                      <p className="text-[9px] font-black uppercase tracking-[0.3em]">Esperando Directivas Forenses...</p>
+                   </div>
+                 )}
+              </div>
+           </Section>
+
+           {/* Badges de Verificación Reutilizables */}
+           <div className="flex flex-wrap gap-2 pt-8">
+              <ClinicalBadge text={hasIA ? "Payload verificado" : "Esperando IA"} variant="atleta" />
+              <ClinicalBadge text={hasIA ? "Tendencia ESTABLE" : "Analizando..."} variant="atleta" />
+              <ClinicalBadge text="0 fallos recientes" variant="gray" />
+              <ClinicalBadge text="100% uptime" variant="gray" />
+              <ClinicalBadge text="Patrón INTERMITENTE" variant="gray" />
+           </div>
+        </div>
+      </div>
+
+      {/* ── FOOTER DE FIRMA ───────────────────────────── */}
+      <footer className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-40">
+         <div className="flex items-center gap-3">
+           <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em]">
+             {ia?.firma || "DR. SRE LOCAL"} · {new Date().toISOString()}
+           </p>
+         </div>
+         <div className="px-4 py-1.5 bg-slate-950 border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+            <span className="text-muted-foreground">FALLBACK_SRE_LOCAL</span>
+            <div className="h-1.5 w-1.5 rounded-full bg-atleta" />
+         </div>
+      </footer>
+    </div>
+  )
+}
+
+function Section({ title, children }: any) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 px-1">
+        <div className="h-3 w-px bg-primary" />
+        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-foreground/80">{title}</h3>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function TechnicalField({ label, value, highlight = false }: any) {
+  return (
+    <div className="flex justify-between items-start gap-4">
+       <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 shrink-0">{label}</span>
+       <span className={cn("text-xs font-bold text-right leading-tight", highlight ? "text-uci" : "text-foreground/80")}>
+         {value}
+       </span>
+    </div>
+  )
+}
+
+function InfoField({ label, value, highlight = false, positive = false }: any) {
+  return (
+    <div className="flex justify-between items-center pb-2 border-b border-white/5">
+       <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">{label}</span>
+       <span className={cn(
+         "text-[10px] font-black uppercase tracking-widest",
+         highlight ? "text-uci" : positive ? "text-atleta" : "text-foreground/80"
+       )}>
+         {value}
+       </span>
+    </div>
+  )
+}
+

@@ -20,6 +20,7 @@ function mapEndpoint(row: Record<string, any>) {
     latencyMs: row.latency_ms ?? null,
     isSuccess: row.is_success ?? null,
     lastCheckedAt: row.checked_at ?? null,
+    isSystem: row.is_system ?? false, // Devolvemos isSystem para que el frontend pueda diferenciarlo
   }
 }
 
@@ -28,17 +29,40 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   try {
-    const res = await pool.query(`
-      SELECT 
-        e.id, e.name, e.url, e.method, e.check_interval_min, e.is_public, 
-        v.status_code, v.latency_ms, v.is_success, v.checked_at
+    const result = await pool.query(
+      `SELECT e.id, e.name, e.url, e.method,
+              e.expected_status, e.check_interval_min,
+              e.latency_threshold_ms, e.keyword_check,
+              e.is_public, e.is_active, e.created_at,
+              v.status_code, v.latency_ms,
+              v.is_success, v.checked_at AS last_checked_at,
+              false AS is_system
       FROM endpoints e
-      LEFT JOIN v_endpoint_status v ON e.id = v.endpoint_id
+      LEFT JOIN v_endpoint_status v
+        ON v.endpoint_id = e.id
       WHERE e.user_id = $1
-      ORDER BY e.created_at DESC
-    `, [session.user.id]);
+      UNION ALL
+      SELECT e.id, e.name, e.url, e.method,
+              e.expected_status, e.check_interval_min,
+              e.latency_threshold_ms, e.keyword_check,
+              e.is_public, e.is_active, e.created_at,
+              v.status_code, v.latency_ms,
+              v.is_success, v.checked_at AS last_checked_at,
+              true AS is_system
+      FROM endpoints e
+      LEFT JOIN v_endpoint_status v
+        ON v.endpoint_id = e.id
+      WHERE e.user_id = (
+        SELECT id FROM users
+        WHERE email = 'system@diagnosta.es'
+      )
+      AND e.is_active = true
+      ORDER BY is_system ASC, created_at DESC
+      LIMIT 26`,
+      [session.user.id]
+    )
 
-    return NextResponse.json(res.rows.map(mapEndpoint));
+    return NextResponse.json(result.rows.map(mapEndpoint));
   } catch (err) {
     console.error("Error al obtener endpoints para dashboard:", err);
     return NextResponse.json({ error: "Error intero en base de datos" }, { status: 500 });
