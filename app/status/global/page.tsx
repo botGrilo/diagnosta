@@ -112,7 +112,7 @@ export default function GlobalStatusPage() {
   }, [endpoints, diagnosticos])
 
   return (
-    <div className="min-h-screen bg-[#020817] text-slate-50 p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-12">
         
         {/* HEADER QUIRÚRGICO - CLINICAL EDITION */}

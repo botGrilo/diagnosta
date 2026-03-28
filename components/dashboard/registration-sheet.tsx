@@ -157,6 +157,29 @@ export function RegistrationSheet({ isOpen, onClose, onSuccess, endpoint }: Regi
               </div>
 
               <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
+                  Método HTTP
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['GET', 'POST', 'HEAD'].map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setFormData({...formData, method: m})}
+                      className={cn(
+                        "py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all",
+                        formData.method === m 
+                          ? "bg-primary text-primary-foreground" 
+                           : "bg-white/5 border border-white/10 text-muted-foreground hover:border-primary/30"
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
                  <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">Keyword (Opcional)</label>
                  <input 
                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-foreground focus:outline-none focus:border-primary/40 transition-all placeholder:text-muted-foreground/30"

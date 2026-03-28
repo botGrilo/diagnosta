@@ -106,7 +106,7 @@ export function StatusCard({
             </div>
             {/* REGLA 4: Label con altura fija y line-clamp */}
             <p className={cn(
-              "text-[9px] font-black uppercase tracking-widest mt-2 line-clamp-2 min-h-[2.2rem]", 
+              "text-[9px] font-black uppercase tracking-widest mt-2 whitespace-pre-line line-clamp-2 min-h-[2.2rem]", 
               isCriticalIA ? "text-uci" : status.color
             )}>
                {isCriticalIA ? "UCI — CRITICO" : status.label}
