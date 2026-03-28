@@ -72,13 +72,13 @@ export function NodeDiagnostic({ data, mode = 'compact' }: NodeDiagnosticProps) 
             {data.name} 
           </h2>
           <p className="text-[10px] font-mono text-muted-foreground mt-2 opacity-60 flex items-center gap-2">
-            <span className="bg-muted px-1.5 py-0.5 rounded text-[8px] font-bold">NODE_ID</span>
+            <span className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-bold">NODE_ID</span>
             {data.id?.split('-')[0] || 'MASTER-CORE'}
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-primary/5 border border-primary/10 rounded-full">
            <Activity className="h-3 w-3 text-primary animate-pulse" />
-           <span className="text-[9px] font-bold text-primary tracking-widest uppercase italic">Diagnóstico Maestro</span>
+           <span className="text-xs font-bold text-primary tracking-widest uppercase italic">Diagnóstico Maestro</span>
         </div>
       </div>
 
@@ -122,7 +122,7 @@ export function NodeDiagnostic({ data, mode = 'compact' }: NodeDiagnosticProps) 
               {meta.ref} <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
             </a>
             
-            <span className="text-[9px] font-mono text-muted-foreground opacity-40 italic">
+            <span className="text-xs font-mono text-muted-foreground opacity-40 italic">
                Ref: {new Date().toLocaleDateString()}
             </span>
           </div>

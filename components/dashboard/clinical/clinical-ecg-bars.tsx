@@ -21,7 +21,7 @@ export function ClinicalECGBars({ data = [3, 5, 4, 8, 2, 6, 4, 7, 9, 5], label, 
           ))}
        </div>
        {label && (
-         <p className="text-[8px] font-black tracking-widest text-muted-foreground/30 uppercase italic">{label}</p>
+         <p className="text-[10px] font-black tracking-widest text-muted-foreground/30 uppercase italic">{label}</p>
        )}
     </div>
   )

@@ -130,11 +130,11 @@ export default function GlobalStatusPage() {
              <div className="px-4 py-2 bg-atleta/5 border border-atleta/10 rounded-2xl flex items-center gap-3">
                 <Shield className="h-4 w-4 text-atleta" />
                 <div className="flex flex-col text-left">
-                   <span className="text-[9px] font-black uppercase tracking-widest text-atleta">RONDA MÉDICA ACTIVA</span>
+                   <span className="text-xs font-black uppercase tracking-widest text-atleta">RONDA MÉDICA ACTIVA</span>
                    <span className="text-[11px] font-mono font-bold text-foreground">Radiografía: {snapshotDate}</span>
                 </div>
              </div>
-             <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest px-2 italic">
+             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest px-2 italic">
                *Propagación Asíncrona Garantizada (FIFO)
              </p>
           </div>
@@ -182,9 +182,9 @@ export default function GlobalStatusPage() {
 
         {/* FOOTER CLÍNICO */}
         <footer className="pt-20 border-t border-white/5 flex justify-between items-center opacity-30 hover:opacity-100 transition-opacity">
-          <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em]">Protocolo Diagnosta v4.0 Clinical Edition</p>
+          <p className="text-xs font-mono font-black uppercase tracking-[0.2em]">Protocolo Diagnosta v4.0 Clinical Edition</p>
           <div className="h-px bg-white/10 flex-1 mx-8" />
-          <p className="text-[9px] font-black tracking-widest uppercase">Nodo: CENTRAL_DOCKER</p>
+          <p className="text-xs font-black tracking-widest uppercase">Nodo: CENTRAL_DOCKER</p>
         </footer>
       </div>
     </div>

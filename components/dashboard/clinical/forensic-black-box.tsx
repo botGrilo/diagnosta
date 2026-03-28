@@ -14,7 +14,7 @@ export function ForensicBlackBox({ raw_data, status_code }: { raw_data: string |
           EVIDENCIA FORENSE
         </div>
         {isError && (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded text-[9px] font-black uppercase tracking-widest animate-pulse">
+          <span className="flex items-center gap-1.5 px-2 py-0.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded text-xs font-black uppercase tracking-widest animate-pulse">
             <ShieldAlert className="h-3 w-3" /> FALLO DE CONEXIÓN
           </span>
         )}

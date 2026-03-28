@@ -32,9 +32,9 @@ export function ClinicalRecipeCard({ children, is_critical = false }: { children
         <div className="bg-red-500/10 border-t border-red-500/20 px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-3 w-3 text-red-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-red-500">Alerta activa</span>
+            <span className="text-xs font-black uppercase tracking-widest text-red-500">Alerta activa</span>
           </div>
-          <span className="text-[9px] font-mono text-red-500/50 uppercase">Protocolo UCI-01</span>
+          <span className="text-xs font-mono text-red-500/50 uppercase">Protocolo UCI-01</span>
         </div>
       )}
 

@@ -22,7 +22,7 @@ export function ClinicalMiniMetric({ label, value, sub, variant = 'white' }: Min
        <p className={cn("text-2xl font-black italic tracking-tighter drop-shadow-sm", textColor[variant])}>
           {value}
        </p>
-       {sub && <p className="text-[8px] font-bold text-muted-foreground/30 uppercase tracking-widest">{sub}</p>}
+       {sub && <p className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">{sub}</p>}
     </div>
   )
 }

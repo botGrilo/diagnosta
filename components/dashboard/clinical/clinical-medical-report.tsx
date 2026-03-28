@@ -44,13 +44,13 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
               </h2>
            </div>
            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
-              <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+              <span className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
                  <Database className="h-2.5 w-2.5" /> ID: {status.id?.slice(0, 12)}
               </span>
-              <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+              <span className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
                  <Fingerprint className="h-2.5 w-2.5" /> TRACE: {ia?.trace_id?.slice(0, 8) || "SRE_UNIFIED"}
               </span>
-              <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+              <span className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
                  <Zap className="h-2.5 w-2.5" /> EXEC: #{ia?.execution_id || "777"}
               </span>
            </div>
@@ -146,7 +146,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
                  ) : (
                    <div className="p-10 text-center border-2 border-dashed border-white/5 rounded-[2rem] opacity-20">
                       <Clock className="h-8 w-8 mx-auto mb-4" />
-                      <p className="text-[9px] font-black uppercase tracking-[0.3em]">Esperando Directivas Forenses...</p>
+                      <p className="text-xs font-black uppercase tracking-[0.3em]">Esperando Directivas Forenses...</p>
                    </div>
                  )}
               </div>
@@ -166,11 +166,11 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
       {/* ── FOOTER DE FIRMA ───────────────────────────── */}
       <footer className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-40">
          <div className="flex items-center gap-3">
-           <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em]">
+           <p className="text-xs font-mono font-black uppercase tracking-[0.2em]">
              {ia?.firma || "DR. GRILO · PROTOCOLO LOCAL"} · {new Date().toISOString()}
            </p>
          </div>
-         <div className="px-4 py-1.5 bg-slate-950 border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+         <div className="px-4 py-1.5 bg-slate-950 border border-white/10 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2">
             <span className="text-muted-foreground">DR. GRILO · DIAGNÓSTICO LOCAL</span>
             <div className="h-1.5 w-1.5 rounded-full bg-atleta" />
          </div>
@@ -205,7 +205,7 @@ function TechnicalField({ label, value, highlight = false }: any) {
 function InfoField({ label, value, highlight = false, positive = false }: any) {
   return (
     <div className="flex justify-between items-center pb-2 border-b border-white/5">
-       <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">{label}</span>
+       <span className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">{label}</span>
        <span className={cn(
          "text-[10px] font-black uppercase tracking-widest",
          highlight ? "text-uci" : positive ? "text-atleta" : "text-foreground/80"

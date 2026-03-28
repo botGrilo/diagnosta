@@ -49,7 +49,7 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
               
               {isLoadingAi && !hasIA && (
                 <div className="absolute top-4 right-8 flex items-center gap-2 animate-pulse">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-primary">Inyectando IA...</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-primary">Inyectando IA...</span>
                   <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                 </div>
               )}
@@ -103,7 +103,7 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                 <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 italic">
+                 <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/40 italic">
                     Explorar expediente clínico completo
                  </p>
                  <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover/card:translate-x-2 transition-transform" />
@@ -125,7 +125,7 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
 
 function BadgeCompact({ text }: { text: string }) {
   return (
-    <div className="px-2 py-1 rounded-full border border-white/5 bg-white/5 text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">
+    <div className="px-2 py-1 rounded-full border border-white/5 bg-white/5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
        {text}
     </div>
   )

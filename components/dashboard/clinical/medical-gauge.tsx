@@ -18,7 +18,7 @@ export function MedicalGauge({ value, label }: { value: number, label: string })
     <div className="space-y-4 group">
       <div className="flex justify-between items-end">
         <div className="space-y-1">
-           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</span>
+           <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground/40">{label}</span>
            <div className="flex items-center gap-2">
               <div className={cn(
                 "h-1.5 w-4 rounded-full transition-all duration-700",
@@ -67,7 +67,7 @@ export function MedicalGauge({ value, label }: { value: number, label: string })
       </div>
 
       {/* RANGOS DE TRIAGE SRE */}
-      <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 px-1 italic">
+      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/30 px-1 italic">
         <span className={isHealthy ? "text-atleta/80" : ""}>Óptimo &lt;300ms</span>
         <span className={isWarning ? "text-amber-500/80" : ""}>Alerta &lt;800ms</span>
         <span className={isCritical ? "text-uci/80" : ""}>UCI &gt;800ms</span>

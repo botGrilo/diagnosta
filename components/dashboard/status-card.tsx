@@ -94,7 +94,7 @@ export function StatusCard({
                     {name}
                   </h3>
                   {isReference && (
-                    <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[8px] font-black text-primary tracking-widest uppercase">Referencia</span>
+                    <span className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[10px] font-black text-primary tracking-widest uppercase">Referencia</span>
                   )}
                 </div>
                 {/* REGLA 3: Truncado de URL */}
@@ -112,7 +112,7 @@ export function StatusCard({
             </div>
             {/* REGLA 4: Label con altura fija y line-clamp */}
             <p className={cn(
-              "text-[9px] font-black uppercase tracking-widest mt-2 whitespace-pre-line line-clamp-2 min-h-[2.2rem]", 
+              "text-xs font-black uppercase tracking-widest mt-2 whitespace-pre-line line-clamp-2 min-h-[2.2rem]", 
               isCriticalIA ? "text-uci" : status.color
             )}>
                {isCriticalIA ? "UCI — CRITICO" : status.label}
@@ -124,7 +124,7 @@ export function StatusCard({
         {ia && (
           <div className="mt-8 p-5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2 relative overflow-hidden">
              <div className={cn("absolute top-0 left-0 w-1 h-full", isCriticalIA ? "bg-uci" : "bg-atleta")} />
-             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 flex items-center gap-2">
+             <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/60 flex items-center gap-2">
                <span className="h-1.5 w-1.5 rounded-full bg-atleta" /> Diagnóstico Dr. Grilo
              </p>
              <p className="text-[11px] font-bold italic text-foreground/90 leading-relaxed pr-4 line-clamp-3">

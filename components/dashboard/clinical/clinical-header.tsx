@@ -23,7 +23,7 @@ export function ClinicalHeader({ name, id, ms }: { name: string, id: string, ms:
           <p className="text-[10px] text-muted-foreground font-mono mt-1 uppercase">NODE: {id.slice(0, 8)}...</p>
         </div>
       </div>
-      <div className={cn("px-3 py-1 border rounded-full text-[9px] font-bold uppercase tracking-widest", category.color)}>
+      <div className={cn("px-3 py-1 border rounded-full text-xs font-bold uppercase tracking-widest", category.color)}>
         {category.label}
       </div>
     </div>

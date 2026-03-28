@@ -100,7 +100,7 @@ export function EndpointList() {
                        )}>
                           {ep.latencyMs ? `${ep.latencyMs}ms` : '--'}
                        </p>
-                       <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30 mt-1 italic">
+                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/30 mt-1 italic">
                           Ritmo: {ep.checkIntervalMin}m
                        </p>
                     </div>

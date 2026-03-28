@@ -18,7 +18,7 @@ export function ClinicalBadge({ text, variant = 'atleta', icon }: ClinicalBadgeP
 
   return (
     <div className={cn(
-      "px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all duration-300",
+      "px-2 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all duration-300",
       styles[variant]
     )}>
        {icon || (variant === 'atleta' && <CheckCircle2 className="h-2.5 w-2.5" />)}
