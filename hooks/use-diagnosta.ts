@@ -55,8 +55,8 @@ export function useDiagnosta(endpoints: any[]) {
         id: ep.id,
         name: ep.name,
         vital_signs: {
-          status_code: ep.isSuccess !== false ? 200 : 500,
-          avg_latency: ep.latencyMs || 0,
+          status_code: ep.statusCode || ep.status_code || (ep.isSuccess !== false ? 200 : 500),
+          latency_ms: ep.latencyMs || ep.latency_ms || 0,
           response_preview: ep.response_preview || null
         }
       }));

@@ -52,6 +52,7 @@ export function RegistrationSheet({ isOpen, onClose, onSuccess, endpoint }: Regi
     try {
       const res = await fetch("/api/validate-endpoint", {
         method: "POST",
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: formData.url }),
       })
       const data = await res.json()
@@ -77,6 +78,7 @@ export function RegistrationSheet({ isOpen, onClose, onSuccess, endpoint }: Regi
       const url = isEditing ? `/api/endpoints/${endpoint.id}` : "/api/endpoints/register"
       const res = await fetch(url, {
         method: isEditing ? "PATCH" : "POST",
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
       
