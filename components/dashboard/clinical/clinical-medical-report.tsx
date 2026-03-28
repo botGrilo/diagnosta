@@ -115,7 +115,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
 
            {/* Historial Visual (Mini Barras Reutilizables) */}
            <Section title="Historial de Latencia (Últimas 10)">
-              <ClinicalECGBars label="Snapshot_ID: SRE_DR" />
+              <ClinicalECGBars label="Snapshot_ID: GRILO_DR" />
            </Section>
         </div>
 
@@ -167,11 +167,11 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
       <footer className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-40">
          <div className="flex items-center gap-3">
            <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em]">
-             {ia?.firma || "DR. SRE LOCAL"} · {new Date().toISOString()}
+             {ia?.firma || "DR. GRILO · PROTOCOLO LOCAL"} · {new Date().toISOString()}
            </p>
          </div>
          <div className="px-4 py-1.5 bg-slate-950 border border-white/10 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
-            <span className="text-muted-foreground">FALLBACK_SRE_LOCAL</span>
+            <span className="text-muted-foreground">DR. GRILO · DIAGNÓSTICO LOCAL</span>
             <div className="h-1.5 w-1.5 rounded-full bg-atleta" />
          </div>
       </footer>

@@ -4,59 +4,81 @@ import { useCallback } from 'react';
 import { useDiagnostaStore } from '@/lib/store/diagnosta-store';
 
 /**
- * HOOK useDiagnosta: EL CONSUMIDOR DE EVENTOS SRE
- * 
- * Este hook ya NO abre conexiones SSE locales. Ahora solo consume el store 
- * centralizado actualizado por el SSEGlobalManager y dispara los análisis.
+ * HOOK useDiagnosta: EL CONSUMIDOR DE EVENTOS DR. GRILO (vSRE)
  */
 export function useDiagnosta(endpoints: any[]) {
   const { 
     diagnosticos, 
     isAnalyzing, 
-    setJobId, 
-    setAnalyzing
   } = useDiagnostaStore();
+  const setAnalyzing = useDiagnostaStore(s => s.setAnalyzing)
+  const setCurrentJobId = useDiagnostaStore(s => s.setCurrentJobId)
+  const setLastSnapshotAt = useDiagnostaStore(s => s.setLastSnapshotAt)
 
-  // ── TRIGGER (DISPARO PROXY FIRMADO HACIA N8N) ──────────
   /**
-   * Captura el estado actual del dashboard y lo envía a n8n para diagnóstico clínico.
+   * Disparador SRE: Envía el snapshot a n8n para análisis
    */
-  const triggerAnalysis = useCallback(async () => {
-    if (!endpoints || endpoints.length === 0) return;
+  const triggerAnalysis = useCallback(async (customEndpoints?: any[], dbTimestamp?: string) => {
+    const targetData = customEndpoints || endpoints
+    if (!targetData || targetData.length === 0) return
+
+    setAnalyzing(true)
+    const jobId = crypto.randomUUID()
+    setCurrentJobId(jobId)
+
+    // Búsqueda del último timestamp real registrado en base de datos de todo el set
+    let latestDBCheck = dbTimestamp;
     
-    setAnalyzing(true);
+    if (!latestDBCheck) {
+       // Escaneamos el set de datos en busca del check más reciente
+       targetData.forEach(ep => {
+          const checkAt = ep.lastCheckedAt || ep.checkedAt || ep.checked_at;
+          if (checkAt && (!latestDBCheck || new Date(checkAt) > new Date(latestDBCheck))) {
+             latestDBCheck = checkAt;
+          }
+       });
+    }
+
+    const finalTimestamp = latestDBCheck || new Date().toISOString()
+    
+    // Formateado humano unificado para toda la plataforma (vía Socio Goyo)
+    const formatted = new Date(finalTimestamp).toLocaleString('es-ES', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+    })
+    
+    setLastSnapshotAt(formatted)
+
+    console.log(`⚡ INICIANDO_TRIAJE_IA — JobID: ${jobId.slice(0, 8)}... — Snapshot Real: ${formatted}`);
+
     try {
-      console.log("⚡ INICIANDO_TRIAJE_IA — Generando snapshot de telemetría...");
-      
-      const snapshots = endpoints.map(ep => ({
+      const snapshots = targetData.map(ep => ({
         id: ep.id,
         name: ep.name,
         vital_signs: {
-          status_code: ep.is_success !== false ? 200 : 500,
-          latency_ms: ep.latency_ms || 0,
+          status_code: ep.isSuccess !== false ? 200 : 500,
+          avg_latency: ep.latencyMs || 0,
           response_preview: ep.response_preview || null
         }
       }));
 
-      const res = await fetch('/api/trigger-analysis', {
+      await fetch('/api/diagnostico-trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshots })
+        body: JSON.stringify({ 
+          snapshots,
+          job_id: jobId,
+          timestamp: finalTimestamp 
+        })
       });
-
-      const result = await res.json();
-      if (result.job_id) {
-        setJobId(result.job_id);
-        console.log(`📡 TRACE_GENERADO — ID: ${result.job_id}`);
-      }
+      
+      console.log(`📡 TRACE_SRE_OK (Data Lineage: DB_TIME_LATEST) — JobID: ${jobId}`);
       
     } catch (err) {
-      console.error('Trigger fallido:', err);
+      console.error('❌ TRIGGER_SRE_FALLIDO:', err);
     } finally {
-      // Delay visual para evitar spam del botón
       setTimeout(() => setAnalyzing(false), 2000);
     }
-  }, [endpoints, setJobId, setAnalyzing]);
+  }, [endpoints, setAnalyzing, setCurrentJobId, setLastSnapshotAt]);
 
   return { 
     diagnosticos, 

@@ -50,15 +50,7 @@ export default function DashboardPage() {
 
 
         {/* ── GRID DE MONITOREO (EL MOTOR SWR) ────────────────── */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4 text-primary" />
-            <h2 className="text-xs font-mono text-primary font-bold uppercase tracking-[0.2em] py-1 border-b-2 border-primary/20">
-              Pilares de Internet
-            </h2>
-          </div>
-          <StatusGrid />
-        </section>
+        <StatusGrid />
 
         {/* ── CONSOLA NEURONAL (INTELIGENCIA ARTIFICIAL) ───────── */}
         <section className="space-y-4">

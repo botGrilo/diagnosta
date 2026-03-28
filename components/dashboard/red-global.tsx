@@ -15,24 +15,23 @@ import {
  * 
  * Integra el disparador de IA con una brújula informativa.
  * Hover: Muestra contexto técnico.
- * Click: Dispara a n8n y navega al Dashboard.
+ * Click: Navega al Dashboard de Red Global.
  */
 export function RedGlobal() {
   const router = useRouter()
   const pathname = usePathname()
   const isRedGlobalActive = pathname === "/status/global"
 
-  const setTriggerRequested = useDiagnostaStore((state) => state.setTriggerRequested)
+  // Consumimos el estado solo para feedback visual, NO disparamos aquí
   const isAnalyzing = useDiagnostaStore((state) => state.isAnalyzing)
 
   const handleClick = (e: React.MouseEvent) => {
-    // Evitamos propagaciones extrañas de Radix
     e.preventDefault();
     e.stopPropagation();
-    console.log("🚀 Disparando Pulso SRE y Navegando...");
-    setTriggerRequested(true);
     
-    // Navegación forzada al Portal de Red Global
+    // NAVEGACIÓN PURA (vía Socio Goyo)
+    // No disparamos triggerRequested(true) porque ya estamos viendo la 'radiografía' actual
+    console.log("🌐 Navegando al Portal de Red Global...");
     router.push("/status/global");
   }
 
@@ -82,7 +81,7 @@ export function RedGlobal() {
             </p>
             <div className="bg-atleta/5 rounded-lg p-2.5 border border-atleta/10 mt-2">
               <p className="text-[10px] leading-tight font-medium text-atleta italic">
-                "Si la Red Global está en verde y tu servicio en rojo, el fallo es local. Si ambos caen, es un problema general. Eficiencia total."
+                "Si la Red Global está en verde y tu servicio en rojo, el fallo es local. Si ambos caen, es un problema general."
               </p>
             </div>
           </div>

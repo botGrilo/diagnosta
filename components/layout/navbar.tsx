@@ -54,7 +54,7 @@ export function Navbar() {
         <div className="flex items-center gap-2 sm:gap-4">
           
           <nav className="hidden md:flex items-center gap-4">
-            {pathname !== "/status/global" && <RedGlobal />}
+            {/* Red Global se ha movido al StatusGrid del Dashboard para mejor contexto */}
           </nav>
 
 

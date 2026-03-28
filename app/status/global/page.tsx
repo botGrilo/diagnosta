@@ -1,28 +1,101 @@
 "use client"
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import useSWR from 'swr'
 import { Shield, Activity } from 'lucide-react'
-import { RedGlobal } from '@/components/dashboard/red-global'
 import { ClinicalStatusView } from '@/components/dashboard/clinical/clinical-status-view'
 import { useDiagnosta } from '@/hooks/use-diagnosta'
-/* 
-  NOTA:
-  He re-ingenierizado el Orquestador. Ahora soporta el 'Modo Congelado'. 
-  Al iniciar el análisis, ignoramos la data viva de SWR para que el diagnóstico 
-  Pura consistencia técnica SRE.
-*/
+import { useDiagnostaStore } from '@/lib/store/diagnosta-store'
+
+/**
+ * SALA DE CONSTANTES VITALES (RED GLOBAL) - CLINICAL EDITION
+ */
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export default function GlobalStatusPage() {
+  // REGLA SRE: RONDA MÉDICA CADA 5 MINUTOS (300000ms)
   const { data: endpoints, error, isLoading, mutate } = useSWR('/api/status', fetcher, { 
-    refreshInterval: 10000,
+    refreshInterval: 300000,
     shouldRetryOnError: true,
-    errorRetryCount: 3
   })
   
-  // VÁLVULA DE SEGURIDAD SRE: Timeout Visual (10s)
   const [showTimeout, setShowTimeout] = useState(false)
+  const { diagnosticos, isAnalyzing, triggerAnalysis } = useDiagnosta(endpoints || [])
+  const setAnalyzing = useDiagnostaStore(s => s.setAnalyzing)
+  const addDiagnostico = useDiagnostaStore(s => s.addDiagnostico)
+  
+  const hasTriggeredRef = useRef<string | null>(null);
+
+  // LÓGICA DE TIEMPO FORENSE: Hallamos la identidad de la radiografía (MAX checked_at)
+  const snapshotRaw = useMemo(() => {
+    if (!endpoints || endpoints.length === 0) return null;
+    let latest: Date | null = null;
+    
+    endpoints.forEach((ep: any) => {
+      const check = ep.checked_at || ep.lastCheckedAt;
+      if (check) {
+        const d = new Date(check);
+        if (!latest || d > latest) latest = d;
+      }
+    });
+
+    return latest ? (latest as Date).toISOString() : null;
+  }, [endpoints]);
+
+  const snapshotDate = useMemo(() => {
+    if (!snapshotRaw) return "BUSCANDO_CONSTANTES...";
+    return new Date(snapshotRaw).toLocaleString('es-ES', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  }, [snapshotRaw]);
+
+  // ARCHIVO DE RADIOGRAFÍAS (LocalStorage Logic - Decisión 3)
+  useEffect(() => {
+    if (!snapshotRaw || !endpoints) return;
+
+    // REGLA DE ORO — Radiografía Forense
+    const snapshotId = snapshotRaw; 
+    const storageKey = `drgrilo_diagnosis_${snapshotId}`;
+    
+    // 1. Verificar si ya existe el diagnóstico en el archivo para ESTA radiografía
+    const cached = localStorage.getItem(storageKey);
+
+    if (cached) {
+      // Misma radiografía = mismo diagnóstico = cero tokens gastados de más
+      console.log(`📋 ARCHIVO_RADIOGRAFÍAS — Cargando diagnóstico previo para snapshot: ${snapshotId}`);
+      try {
+        const parsed = JSON.parse(cached);
+        // Inyectamos los diagnósticos guardados en el store global
+        Object.entries(parsed).forEach(([nodeId, data]) => {
+          addDiagnostico(nodeId, data);
+        });
+      } catch (e) {
+        console.error("Error al leer archivo de radiografías:", e);
+      }
+    } else {
+      // Radiografía nueva — El Dr. Grilo nunca ha visto esta placa
+      if (hasTriggeredRef.current !== snapshotId) {
+        console.log(`🔬 NUEVA_RADIOGRAFÍA — El Dr. Grilo entra en Quirófano para snapshot: ${snapshotId}`);
+        hasTriggeredRef.current = snapshotId;
+        triggerAnalysis(); // Dispara el análisis a n8n
+      }
+    }
+
+    // 2. Limpieza de radiografías viejas — Solo guardamos la más reciente
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('drgrilo_diagnosis_') && k !== storageKey)
+      .forEach(k => localStorage.removeItem(k));
+
+  }, [snapshotRaw, endpoints, addDiagnostico, triggerAnalysis]);
+
+  // Persistir resultados nuevos en localStorage (Caché de escritura)
+  useEffect(() => {
+    if (snapshotRaw && Object.keys(diagnosticos).length > 0 && !isAnalyzing) {
+      const storageKey = `drgrilo_diagnosis_${snapshotRaw}`;
+      localStorage.setItem(storageKey, JSON.stringify(diagnosticos));
+    }
+  }, [diagnosticos, isAnalyzing, snapshotRaw]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!endpoints && !error) setShowTimeout(true)
@@ -30,49 +103,26 @@ export default function GlobalStatusPage() {
     return () => clearTimeout(timer)
   }, [endpoints, error])
 
-  const [selectedEndpoint, setSelectedEndpoint] = useState<any | null>(null)
-  
-  // MOTOR FORENSE SSE (Unificado)
-  const { diagnosticos, isAnalyzing } = useDiagnosta(endpoints || [])
-
-  // EL CEREBRO: Mapeamos los datos en tiempo real
   const displayData = useMemo(() => {
     if (!endpoints) return []
     return endpoints.map((ep: any) => ({
       ...ep,
-      ...(diagnosticos[ep.id] || {}) // Inyectamos diagnóstico IA si existe
+      ...(diagnosticos[ep.id] || {}) 
     }))
   }, [endpoints, diagnosticos])
-
-  // SONDA DE GUERRA: Verificamos en consola la data real de n8n
-  useEffect(() => {
-    if (Object.keys(diagnosticos).length > 0) {
-      console.log("🩺 TRIAJE_LABORATORIO_SRE (Auditoría Global) — Snapshot:", new Date().toLocaleTimeString());
-      console.table(Object.entries(diagnosticos).map(([id, data]: any) => ({
-        Nodo_ID: id.slice(0, 8) + "...",
-        Gravedad: data.ia_recipe?.resumen_clinico?.gravedad || "N/A",
-        Tendencia: data.ia_recipe?.analisis_tecnico?.tendencia || "CONEXIÓN_PURA",
-        Diagnostico: data.ia_recipe?.resumen_clinico?.titulo_diagnostico || "Escaneando..."
-      })));
-    }
-  }, [diagnosticos])
-
-  // Obtener fecha del snapshot (la primera que encuentre)
-  const snapshotDate = endpoints?.[0]?.checked_at ? new Date(endpoints[0].checked_at).toLocaleString('es-ES', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-  }) : "SIN_CAPTURA_ACTIVA";
 
   return (
     <div className="min-h-screen bg-[#020817] text-slate-50 p-8">
       <div className="max-w-7xl mx-auto space-y-12">
-        {/* HEADER QUIRÚRGICO */}
+        
+        {/* HEADER QUIRÚRGICO - CLINICAL EDITION */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/5 pb-8 gap-6">
           <div className="space-y-1">
             <h1 className="text-4xl font-black tracking-tighter italic">
               RED <span className="text-atleta">GLOBAL</span>
             </h1>
             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.4em]">
-              Monitorización Forense Activa
+              CONSTANTES VITALES DE LA RED — Radiografía en curso
             </p>
           </div>
 
@@ -80,8 +130,8 @@ export default function GlobalStatusPage() {
              <div className="px-4 py-2 bg-atleta/5 border border-atleta/10 rounded-2xl flex items-center gap-3">
                 <Shield className="h-4 w-4 text-atleta" />
                 <div className="flex flex-col text-left">
-                   <span className="text-[9px] font-black uppercase tracking-widest text-atleta">Triaje de Laboratorio (SRE)</span>
-                   <span className="text-[11px] font-mono font-bold text-foreground">Snapshot: {snapshotDate}</span>
+                   <span className="text-[9px] font-black uppercase tracking-widest text-atleta">RONDA MÉDICA ACTIVA</span>
+                   <span className="text-[11px] font-mono font-bold text-foreground">Radiografía: {snapshotDate}</span>
                 </div>
              </div>
              <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest px-2 italic">
@@ -90,7 +140,7 @@ export default function GlobalStatusPage() {
           </div>
         </header>
 
-        {/* REJILLA DE NODOS CLÍNICOS */}
+        {/* REJILLA DE CARDS (SALA DE CONSTANTES VITALES) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
           {displayData?.map((endpoint: any) => (
             <ClinicalStatusView 
@@ -100,12 +150,11 @@ export default function GlobalStatusPage() {
             />
           ))}
 
-          {/* ESTADOS DE CARGA / ERROR SRE */}
           {(!endpoints && !error && !showTimeout) && (
-             <div className="col-span-full py-20 text-center space-y-4 animate-in fade-in duration-500">
+             <div className="col-span-full py-20 text-center space-y-4 animate-in fade-in duration-700">
                 <div className="animate-spin h-10 w-10 border-4 border-atleta border-t-transparent rounded-full mx-auto shadow-[0_0_20px_rgba(45,212,191,0.2)]" />
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">
-                   Sincronizando con el Núcleo SRE...
+                   Sincronizando constantes vitales...
                 </p>
              </div>
           )}
@@ -131,9 +180,9 @@ export default function GlobalStatusPage() {
           )}
         </div>
 
-        {/* FOOTER DE ESTADO */}
+        {/* FOOTER CLÍNICO */}
         <footer className="pt-20 border-t border-white/5 flex justify-between items-center opacity-30 hover:opacity-100 transition-opacity">
-          <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em]">Protocolo Diagnosta v4.0 SRE</p>
+          <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em]">Protocolo Diagnosta v4.0 Clinical Edition</p>
           <div className="h-px bg-white/10 flex-1 mx-8" />
           <p className="text-[9px] font-black tracking-widest uppercase">Nodo: CENTRAL_DOCKER</p>
         </footer>

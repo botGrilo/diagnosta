@@ -47,31 +47,10 @@ export function StatusModal({ isOpen, onClose, endpoint }: StatusModalProps) {
           </button>
         </div>
 
-        {/* ── CUERPO DEL REPORTE CLÍNICO ── */}
-        <div className="max-h-[80vh] overflow-y-auto custom-scrollbar p-0 bg-black/50">
-           {/* Inyectamos la vista clínica aquí // <--- Reemplaza aquí */}
-           <ClinicalStatusView status={endpoint} />
-        </div>
-
-        {/* Body: Consola de Ingeniería Clínica */}
-        <div className="p-6 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-          {/* METADATA RÁPIDA (Versión simplificada) */}
-          <div className="grid grid-cols-2 gap-4">
-             <div className="bg-background/40 border border-border/20 p-3 rounded-xl">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase mb-1">
-                   <Clock className="h-3 w-3" /> Latencia Real
-                </div>
-                <p className="text-xl font-black font-mono text-foreground">{endpoint.latency_ms}ms</p>
-             </div>
-             <div className="bg-background/40 border border-border/20 p-3 rounded-xl">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase mb-1">
-                   <Terminal className="h-3 w-3" /> Status Code
-                </div>
-                <p className={cn("text-xl font-black font-mono", endpoint.is_success ? "text-emerald-500" : "text-red-500")}>
-                   {endpoint.status_code || '--'}
-                </p>
-             </div>
-          </div>
+        {/* ── CUERPO DEL REPORTE CLÍNICO COMPLETO ── */}
+        <div className="max-h-[85vh] overflow-y-auto custom-scrollbar p-0 bg-black/50">
+           {/* La vista clínica ya incluye latencia, status y reportes IA */}
+           <ClinicalStatusView status={endpoint as any} />
         </div>
 
         {/* Footer: Timestamp consolidado */}

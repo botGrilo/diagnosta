@@ -1,25 +1,24 @@
 import { create } from 'zustand';
 
 /**
- * STORE SRE CENTRALIZADO (ZUSTAND)
- * 
- * Este store funciona como el "Single Source of Truth" para los diagnósticos.
- * Permite que las tarjetas se actualicen en tiempo real y que los modales
- * clínicos tengan acceso a las "Recetas Médicas" (ai_recipe) sin perder datos.
+ * STORE DR. GRILO CENTRALIZADO (ZUSTAND)
  */
 
 interface DiagnostaStore {
   currentJobId: string | null;
-  diagnosticos: Record<string, any>; // Mapa: node_id => payload_n8n
+  diagnosticos: Record<string, any>; 
   isAnalyzing: boolean;
   triggerRequested: boolean;
+  lastSnapshotAt: string | null; // NUEVO: Sincronización temporal entre páginas
   setTriggerRequested: (val: boolean) => void;
   
   // Acciones
   setJobId: (id: string) => void;
   setAnalyzing: (status: boolean) => void;
   addDiagnostico: (nodeId: string, data: any) => void;
+  setLastSnapshotAt: (val: string | null) => void; // NUEVO
   resetAll: () => void;
+  setCurrentJobId: (id: string) => void;
 }
 
 export const useDiagnostaStore = create<DiagnostaStore>((set) => ({
@@ -27,14 +26,13 @@ export const useDiagnostaStore = create<DiagnostaStore>((set) => ({
   diagnosticos: {},
   isAnalyzing: false,
   triggerRequested: false,
+  lastSnapshotAt: null,
   setTriggerRequested: (val) => set({ triggerRequested: val }),
 
   setJobId: (id) => set({ currentJobId: id }),
   setAnalyzing: (status) => set({ isAnalyzing: status }),
+  setLastSnapshotAt: (val) => set({ lastSnapshotAt: val }),
   
-  /**
-   * Inyecta un nuevo diagnóstico recibido por SSE (FIFO)
-   */
   addDiagnostico: (nodeId, data) => set((state) => ({
     diagnosticos: { 
       ...state.diagnosticos, 
@@ -42,5 +40,7 @@ export const useDiagnostaStore = create<DiagnostaStore>((set) => ({
     }
   })),
 
-  resetAll: () => set({ diagnosticos: {}, currentJobId: null, isAnalyzing: false })
+  setCurrentJobId: (id) => set({ currentJobId: id }),
+
+  resetAll: () => set({ diagnosticos: {}, currentJobId: null, isAnalyzing: false, lastSnapshotAt: null })
 }));
