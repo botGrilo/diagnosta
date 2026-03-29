@@ -36,6 +36,7 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
   const epi = status.epidemiology_report || status.epidemiology;
   const hasIA = !!ia;
   const latency = (status.latency_ms || 0);
+  const historyValues = epi?.recent_history?.map((h: any) => h.latency_ms) || [];
 
   const isHealthy = latency < 300
   const isWarning = latency >= 300 && latency < 800
@@ -77,11 +78,11 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
                  <ClinicalMiniMetric label="Latencia Actual" value={`${latency}ms`} variant={isHealthy ? "atleta" : isWarning ? "amber" : "uci"} />
                  <ClinicalMiniMetric label="Uptime" value={epi?.uptime_score || "100%"} variant="atleta" />
                  <ClinicalMiniMetric label="Promedio Hist." value={`${epi?.avg_latency || 0}ms`} />
-                 <ClinicalMiniMetric label="Tendencia" value={ia?.analisis_tecnico?.tendencia || "ESTABLE"} variant={ia?.resumen_clinico?.gravedad === 'ROJO' ? "uci" : "atleta"} />
+                 <ClinicalMiniMetric label="Tendencia" value={epi?.trend || ia?.analisis_tecnico?.tendencia || "ESTABLE"} variant={ia?.resumen_clinico?.gravedad === 'ROJO' ? "uci" : "atleta"} />
               </div>
 
-              {/* ── MINI HISTORIAL DE PULSO (REUTILIZABLE) ──────── */}
-              <ClinicalECGBars label="Trazabilidad Capa 7 (Latidos)" />
+              {/* ── MINI HISTORIAL DE PULSO (ECG DINÁMICO) ──────── */}
+              <ClinicalECGBars data={historyValues} label={`SNAPSHOT: ${status.id?.slice(0, 8)}`} />
 
               {/* ── SECCIÓN DR. SRE (NARRATIVA ENGROSADA) ───────── */}
               <div className="flex-1 bg-white/[0.02] hover:bg-white/[0.04] rounded-[2rem] p-6 border border-white/5 space-y-3 relative overflow-hidden group-hover/card:border-primary/40 transition-all duration-500 shadow-2xl">
@@ -97,9 +98,9 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
 
               {/* ── BADGES REUTILIZABLES ────────────────────────── */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
-                 <ClinicalBadge text="Payload verificado" variant="atleta" />
-                 <ClinicalBadge text={`Patrón: ${ia?.analisis_tecnico?.patron_historico || "INTERMITENTE"}`} variant="gray" />
-                 <BadgeCompact text="Forense activo" />
+                 <ClinicalBadge text={epi?.evidence_captured ? "Payload verificado" : "Auditoría activa"} variant="atleta" />
+                 <ClinicalBadge text={`Patrón: ${epi?.trend || ia?.analisis_tecnico?.patron_historico || "NORMAL"}`} variant="gray" />
+                 <BadgeCompact text={`EXEC #${ia?.execution_id || ia?._internal?.execution_id || '777'}`} />
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-white/5">

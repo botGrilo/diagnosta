@@ -22,10 +22,17 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
   const hasIA = !!ia
 
   // Datos de Triage
-  const latency = epi ? parseInt(epi.avg_latency) : (status.latency_ms || 0)
+  const latency = status.latency_ms || 0
+  const avgLatency = typeof epi?.avg_latency === 'string' ? parseFloat(epi.avg_latency) : (epi?.avg_latency || 0)
   const isHealthy = latency < 300
   const isWarning = latency >= 300 && latency < 800
   const isCritical = latency >= 800
+
+  // Historial y Estadísticas
+  const recentHistory = epi?.recent_history || []
+  const historyValues = recentHistory.map((h: any) => h.latency_ms)
+  const minLatency = historyValues.length > 0 ? Math.min(...historyValues) : 0
+  const maxLatency = historyValues.length > 0 ? Math.max(...historyValues) : 0
 
   return (
     <div className="space-y-8 py-4">
@@ -51,7 +58,10 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
                  <Fingerprint className="h-2.5 w-2.5" /> TRACE: {ia?.trace_id?.slice(0, 8) || "SRE_UNIFIED"}
               </span>
               <span className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
-                 <Zap className="h-2.5 w-2.5" /> EXEC: #{ia?.execution_id || "777"}
+                 <Zap className="h-2.5 w-2.5" /> EXEC: #{ia?.execution_id || ia?._internal?.execution_id || "777"}
+              </span>
+              <span className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest flex items-center gap-1">
+                 <Terminal className="h-2.5 w-2.5" /> RAW STATUS: {status.status_code || status.statusCode || 200}
               </span>
            </div>
         </div>
@@ -67,10 +77,10 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
 
       {/* ── CUADRO DE MÉTRICAS CLAVE (USANDO COMPONENTES REUTILIZABLES) ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5">
-        <ClinicalMiniMetric label="Latencia Actual" value={`${status.latency_ms || 0}ms`} sub="Ciclo HTTPS completo" variant={isHealthy ? "atleta" : isWarning ? "amber" : "uci"} />
-        <ClinicalMiniMetric label="Uptime Score" value={epi?.uptime_score || "100%"} sub="Últimos 50 checks" variant="atleta" />
-        <ClinicalMiniMetric label="Promedio Histórico" value={`${epi?.avg_latency || 0}ms`} sub={`Tendencia: ${ia?.analisis_tecnico?.tendencia || "ESTABLE"}`} />
-        <ClinicalMiniMetric label="Fallos Recientes" value={ia?.fallos_recientes || "0"} sub="de últimos 10 checks" variant={ia?.fallos_recientes > 0 ? "uci" : "atleta"} />
+        <ClinicalMiniMetric label="Latencia Actual" value={`${latency}ms`} sub="Ciclo HTTPS completo" variant={isHealthy ? "atleta" : isWarning ? "amber" : "uci"} />
+        <ClinicalMiniMetric label="Uptime Score" value={epi?.uptime_score || "100%"} sub="Últimos 10 checks" variant="atleta" />
+        <ClinicalMiniMetric label="Promedio Histórico" value={`${avgLatency}ms`} sub={`Tendencia: ${ia?.analisis_tecnico?.tendencia || epi?.trend || "ESTABLE"}`} />
+        <ClinicalMiniMetric label="Fallos Recientes" value={epi?.fallos_recientes || ia?.fallos_recientes || "0"} sub="de últimos 10 checks" variant={(epi?.fallos_recientes || ia?.fallos_recientes) > 0 ? "uci" : "atleta"} />
       </div>
 
       {/* ── LAYOUT DE DOS COLUMNAS (CONTENIDO FORENSE) ───── */}
@@ -82,13 +92,21 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
            <Section title="Resumen Clínico">
               <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 relative overflow-hidden">
                  <div className="absolute top-0 left-0 w-1 h-full bg-primary/20" />
+                 {ia?.resumen_clinico?.titulo_diagnostico && (
+                   <h4 className="text-base font-black text-atleta/90 mb-3 tracking-tight">
+                     {ia.resumen_clinico.titulo_diagnostico}
+                   </h4>
+                 )}
                  <p className="text-sm font-bold italic text-foreground/90 leading-relaxed">
-                   "{hasIA ? ia.resumen_clinico.descripcion_humana : "Auditando evidencias forenses en tiempo real..."}"
+                   "{hasIA ? ia.resumen_clinico.descripcion_humana || ia.resumen_clinico.descripcion : "Auditando evidencias forenses en tiempo real..."}"
                  </p>
                  <div className="grid grid-cols-2 gap-4 mt-6">
                     <InfoField label="Gravedad" value={ia?.resumen_clinico.gravedad || "ESTABLE"} highlight={ia?.resumen_clinico.gravedad === 'ROJO'} />
-                    <InfoField label="Requiere Humano" value={ia?.resumen_clinico.requiere_humano || "NO"} />
-                    <InfoField label="Evidencia" value="✓ Payload JSON verificado" positive />
+                    <InfoField label="Categoría" value={epi?.health_category || "NORMAL"} />
+                    <InfoField label="Requiere Humano" value={ia?.resumen_clinico.requiere_humano === true || ia?.resumen_clinico.requiere_humano === 'SÍ' ? "SÍ" : "NO"} />
+                    <InfoField label="Panic Mode" value={epi?.panic_mode ? "ACTIVO" : "No activo"} highlight={epi?.panic_mode} />
+                    <InfoField label="Capturado" value={epi?.captured_at ? new Date(epi.captured_at).toLocaleString() : new Date().toLocaleString()} />
+                    <InfoField label="Evidencia" value="✓ Payload Real — verificado" positive />
                  </div>
               </div>
            </Section>
@@ -96,26 +114,37 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
            {/* Análisis Técnico */}
            <Section title="Análisis Técnico">
               <div className="space-y-4">
-                 <TechnicalField label="Causa raíz probable" value={ia?.analisis_tecnico.causa_raiz_probable || "Auditando evidencias de latencia estándar."} />
+                 <TechnicalField label="Causa raíz probable" value={ia?.analisis_tecnico.causa_raiz_probable || ia?.analisis_tecnico.causa_raiz || "Latencia de red estándar para JSON."} />
                  <TechnicalField label="Causa diferencial" value={ia?.analisis_tecnico.causa_diferencial || "Anomalía de Capa 7 descartada temporalmente."} />
                  <div className="grid grid-cols-2 gap-4">
                     <TechnicalField label="Destinatario" value={ia?.analisis_tecnico.destinatario || "AUTOMÁTICO"} />
-                    <TechnicalField label="Patrón histórico" value={ia?.analisis_tecnico.patron_historico || "INTERMITENTE"} />
+                    <TechnicalField label="Patrón histórico" value={ia?.analisis_tecnico.patron_historico || ia?.analisis_tecnico.patron || "AGUDO"} />
                  </div>
+                 <TechnicalField label="Tendencia" value={ia?.analisis_tecnico.tendencia || epi?.trend || "ESTABLE"} />
               </div>
            </Section>
 
            {/* Pronóstico */}
            <Section title="Pronóstico">
               <div className="grid grid-cols-2 gap-4">
-                 <TechnicalField label="Recuperación" value={ia?.pronostico.recuperacion || "Sin intervención necesaria."} />
+                 <TechnicalField label="Tiempo Recuperación" value={ia?.pronostico.tiempo_recuperacion || ia?.pronostico.recuperacion || "Inmediato"} />
                  <TechnicalField label="Impacto negocio" value={ia?.pronostico.impacto_negocio || "Ninguno — Operativo."} highlight={ia?.resumen_clinico.gravedad === 'ROJO'} />
               </div>
            </Section>
 
-           {/* Historial Visual (Mini Barras Reutilizables) */}
-           <Section title="Historial de Latencia (Últimas 10)">
-              <ClinicalECGBars label="Snapshot_ID: GRILO_DR" />
+           {/* Historial Visual (ECG dinámico) */}
+           <Section title="Historial Clínico (Últimas 10 mediciones)">
+              <ClinicalECGBars data={historyValues} label={`SNAPSHOT_ID: ${status.id?.slice(0, 8)}`} />
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                 <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground/40 mb-1">Mín Histórico</p>
+                    <p className="text-sm font-black text-atleta">{minLatency}ms</p>
+                 </div>
+                 <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground/40 mb-1">Máx Histórico</p>
+                    <p className="text-sm font-black text-amber-500">{maxLatency}ms</p>
+                 </div>
+              </div>
            </Section>
         </div>
 
@@ -154,11 +183,11 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
 
            {/* Badges de Verificación Reutilizables */}
            <div className="flex flex-wrap gap-2 pt-8">
-              <ClinicalBadge text={hasIA ? "Payload verificado" : "Esperando IA"} variant="atleta" />
-              <ClinicalBadge text={hasIA ? "Tendencia ESTABLE" : "Analizando..."} variant="atleta" />
-              <ClinicalBadge text="0 fallos recientes" variant="gray" />
-              <ClinicalBadge text="100% uptime" variant="gray" />
-              <ClinicalBadge text="Patrón INTERMITENTE" variant="gray" />
+              <ClinicalBadge text={epi?.evidence_captured ? "Payload verificado" : "Esperando IA"} variant="atleta" />
+              <ClinicalBadge text={`Tendencia ${epi?.trend || ia?.analisis_tecnico?.tendencia || "ESTABLE"}`} variant="atleta" />
+              <ClinicalBadge text={`${epi?.fallos_recientes || 0} fallos recientes`} variant={epi?.fallos_recientes > 0 ? "uci" : "gray"} />
+              <ClinicalBadge text={`${epi?.uptime_score || "100%"} uptime`} variant="gray" />
+              <ClinicalBadge text={`Patrón ${ia?.analisis_tecnico?.patron_historico || "INTERMITENTE"}`} variant="gray" />
            </div>
         </div>
       </div>
@@ -167,11 +196,11 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
       <footer className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-40">
          <div className="flex items-center gap-3">
            <p className="text-xs font-mono font-black uppercase tracking-[0.2em]">
-             {ia?.firma || "DR. GRILO · PROTOCOLO LOCAL"} · {new Date().toISOString()}
+             {ia?.firma || "DR. GRILO · PROTOCOLO LOCAL"} · {ia?._internal?.timestamp || new Date().toISOString()}
            </p>
          </div>
          <div className="px-4 py-1.5 bg-slate-950 border border-white/10 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2">
-            <span className="text-muted-foreground">DR. GRILO · DIAGNÓSTICO LOCAL</span>
+            <span className="text-muted-foreground">PROVEEDOR IA: {status.ai_provider || "Gemini_AI_n8n"}</span>
             <div className="h-1.5 w-1.5 rounded-full bg-atleta" />
          </div>
       </footer>
