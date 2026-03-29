@@ -23,8 +23,8 @@ export function useDiagnosta(endpoints: any[]) {
     if (!targetData || targetData.length === 0) return
 
     setAnalyzing(true)
-    const jobId = crypto.randomUUID()
-    setCurrentJobId(jobId)
+    // El JobID ahora se sincroniza DESPUÉS de recibir la respuesta del servidor seguro
+
 
     // Búsqueda del último timestamp real registrado en base de datos de todo el set
     let latestDBCheck = dbTimestamp;
@@ -48,7 +48,7 @@ export function useDiagnosta(endpoints: any[]) {
     
     setLastSnapshotAt(formatted)
 
-    console.log(`⚡ INICIANDO_TRIAJE_IA — JobID: ${jobId.slice(0, 8)}... — Snapshot Real: ${formatted}`);
+    console.log(`⚡ INICIANDO_TRIAJE_IA — Negociando ID con el servidor seguro... — Snapshot Real: ${formatted}`);
 
     try {
       const snapshots = targetData.map(ep => ({
@@ -61,17 +61,23 @@ export function useDiagnosta(endpoints: any[]) {
         }
       }));
 
-      await fetch('/api/diagnostico-trigger', {
+      const response = await fetch('/api/trigger-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           snapshots,
-          job_id: jobId,
           timestamp: finalTimestamp 
         })
       });
+
+      if (!response.ok) throw new Error("Error en trigger-analysis");
+
+      const { job_id: serverJobId } = await response.json();
       
-      console.log(`📡 TRACE_SRE_OK (Data Lineage: DB_TIME_LATEST) — JobID: ${jobId}`);
+      // Muy importante: Sincronizar con el ID real del servidor para que el SSE coincida
+      setCurrentJobId(serverJobId);
+      
+      console.log(`📡 TRACE_SRE_OK (Data Lineage: DB_TIME_LATEST) — ServerJobID: ${serverJobId}`);
       
     } catch (err) {
       console.error('❌ TRIGGER_SRE_FALLIDO:', err);
