@@ -29,6 +29,7 @@ export default function GlobalStatusPage() {
   // LÓGICA DE TIEMPO FORENSE: Hallamos la identidad de la radiografía (MAX checked_at)
   const snapshotRaw = useMemo(() => {
     if (!endpoints || endpoints.length === 0) return null;
+    console.log("endpoints:", endpoints)
     let latest: Date | null = null;
     
     endpoints.forEach((ep: any) => {
@@ -104,13 +105,15 @@ export default function GlobalStatusPage() {
   }, [endpoints, error])
 
   const displayData = useMemo(() => {
+    
     if (!endpoints) return []
+    
     return endpoints.map((ep: any) => ({
       ...ep,
       ...(diagnosticos[ep.id] || {}) 
     }))
   }, [endpoints, diagnosticos])
-
+  
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-12">

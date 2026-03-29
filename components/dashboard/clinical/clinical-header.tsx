@@ -11,12 +11,13 @@ export function ClinicalHeader({ name, id, ms }: { name: string, id: string, ms:
   };
 
   const category = getCategory(ms);
-
+  
   return (
     <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
       <div className="flex items-center gap-3">
         <div className={cn("h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20")}>
           <Shield className="h-6 w-6 text-primary" />
+         
         </div>
         <div>
           <h2 className="text-xl font-black uppercase tracking-tighter text-white leading-none truncate max-w-[150px]">{name}</h2>
@@ -24,7 +25,7 @@ export function ClinicalHeader({ name, id, ms }: { name: string, id: string, ms:
         </div>
       </div>
       <div className={cn("px-3 py-1 border rounded-full text-xs font-bold uppercase tracking-widest", category.color)}>
-        {category.label}
+        {category.label}       
       </div>
     </div>
   )
