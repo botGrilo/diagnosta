@@ -1,12 +1,9 @@
-/**  el endpoint dual. El POST recibe, valida la firma HMAC de n8n y "empuja" el dato al Map. El GET abre el canal SSE (Server-Sent Events) para que el Frontend escuche en tiempo real. +*/
-
-
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { sseClients as clients } from '@/lib/sse-store';
 
 /**
- * GET: Abre el canal SSE para el Dashboard
+ * GET: Abre el canal SSE para el Dashboard (Túnel de entrada Dr. Grilo)
  */
 export async function GET(req: NextRequest) {
   const stream = new ReadableStream({
@@ -35,51 +32,56 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST: Receptor de n8n (Push Inbound)
+ * POST: Receptor de n8n (Push Inbound - Modo Quirúrgico)
  */
 export async function POST(req: NextRequest) {
-  // --- TAREA 3: LOGS DE GUERRA EN EL LUGAR CORRECTO ---
-  console.log("N8N PUSH RECIBIDO:", new Date().toISOString());
-  
-  const signature = req.headers.get('x-diagnosta-signature');
-  const timestamp = req.headers.get('x-diagnosta-timestamp');
-  
-  // 1. Validación de Presencia
-  if (!signature || !timestamp) {
-    return Response.json({ error: 'Firma ausente' }, { status: 401 });
-  }
-
-  // 2. Verificación HMAC (Seguridad de Grado Militar)
-  const secret = process.env.DIAGNOSTA_WEBHOOK_SECRET || '';
-  const salt = process.env.DIAGNOSTA_SALT || '';
-  
-  const expectedSignature = crypto
-    .createHmac('sha256', secret + salt)
-    .update(timestamp)
-    .digest('hex');
-
-  if (signature !== expectedSignature) {
-    return Response.json({ error: 'Infiltración detectada: Firma inválida' }, { status: 403 });
-  }
-
-  // 3. Procesamiento y Emisión FIFO
   try {
-    const data = await req.json();
-    console.log("PAYLOAD IA:", JSON.stringify(data).substring(0, 150) + "...");
+    const rawBody = await req.json();
+    
+    // 1. DESEMPAQUETADO DE TRAMA: n8n entrega [ { ... } ]
+    const item = Array.isArray(rawBody) ? rawBody[0] : rawBody;
+    
+    // 2. EXTRACCIÓN DE CONTENIDO VITAL: Tomamos el objeto 'data' (o el root si n8n no lo envolvió)
+    const diagnostico = item.data || item;
+    
+    if (!diagnostico?.id) {
+      return Response.json({ error: 'Payload inválido: falta identificador de nodo' }, { status: 400 });
+    }
 
-    // EMISIÓN UNIFICADA A TODOS LOS DASHBOARDS CONECTADOS (Fan-out)
+    // 3. VALIDACIÓN DE IDENTIDAD HÍBRIDA (Header + Body _auth)
+    const signature = req.headers.get('x-diagnosta-signature') || item?._auth?.signature;
+    const timestamp = req.headers.get('x-diagnosta-timestamp') || item?._auth?.timestamp;
+
+    if (signature && timestamp) {
+      const secret = process.env.DIAGNOSTA_WEBHOOK_SECRET || '';
+      const salt = process.env.DIAGNOSTA_SALT || '';
+      const expected = crypto.createHmac('sha256', secret + salt).update(timestamp).digest('hex');
+      
+      if (signature !== expected) {
+        console.warn("⚠️ ALERTA_SEGURIDAD — Firma inválida detectada en el receptor.");
+        return Response.json({ error: 'Infiltración detectada: firma inválida' }, { status: 403 });
+      }
+    }
+
+    // 4. EMISIÓN LIMPIA (BROADCAST SSE): Remitimos solo el diagnóstico sin metadatos de auth
     clients.forEach((controller, clientId) => {
       try {
-        const payload = JSON.stringify({ type: 'DIAGNOSTICO_NEW', data });
+        const payload = JSON.stringify({
+          type: 'DIAGNOSTICO_NEW',
+          data: diagnostico
+        });
         controller.enqueue(new TextEncoder().encode(`data: ${payload}\n\n`));
       } catch (e) {
-        // Limpieza automática si el stream está roto
+        // Limpieza automática si el stream está muerto
         clients.delete(clientId);
       }
     });
 
-    return Response.json({ status: 'Broadcast exitoso' });
-  } catch (err) {
-    return Response.json({ error: 'Fallo en la retransmisión' }, { status: 400 });
+    console.log(`🩺 BROADCAST_EXITOSO — Nodo: ${diagnostico.id.slice(0, 8)}... — Total Clientes: ${clients.size}`);
+    return Response.json({ status: 'Broadcast exitoso', job_id: diagnostico.job_id });
+
+  } catch (err: any) {
+    console.error("❌ ERROR_RECEPTOR_PUSH_MAESTRO:", err.message);
+    return Response.json({ error: 'Fallo crítico en el receptor' }, { status: 500 });
   }
 }
