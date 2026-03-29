@@ -62,8 +62,6 @@ export default function GlobalStatusPage() {
     const cached = localStorage.getItem(storageKey);
 
     if (cached) {
-      // Misma radiografía = mismo diagnóstico = cero tokens gastados de más
-      console.log(`📋 ARCHIVO_RADIOGRAFÍAS — Cargando diagnóstico previo para snapshot: ${snapshotId}`);
       try {
         const parsed = JSON.parse(cached);
         // Inyectamos los diagnósticos guardados en el store global
@@ -76,7 +74,6 @@ export default function GlobalStatusPage() {
     } else {
       // Radiografía nueva — El Dr. Grilo nunca ha visto esta placa
       if (hasTriggeredRef.current !== snapshotId) {
-        console.log(`🔬 NUEVA_RADIOGRAFÍA — El Dr. Grilo entra en Quirófano para snapshot: ${snapshotId}`);
         hasTriggeredRef.current = snapshotId;
         triggerAnalysis(); // Dispara el análisis a n8n
       }

@@ -78,8 +78,8 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
       {/* ── CUADRO DE MÉTRICAS CLAVE (USANDO COMPONENTES REUTILIZABLES) ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5">
         <ClinicalMiniMetric label="Latencia Actual" value={`${latency}ms`} sub="Ciclo HTTPS completo" variant={isHealthy ? "atleta" : isWarning ? "amber" : "uci"} />
-        <ClinicalMiniMetric label="Uptime Score" value={epi?.uptime_score || "100%"} sub="Últimos 10 checks" variant="atleta" />
-        <ClinicalMiniMetric label="Promedio Histórico" value={`${avgLatency}ms`} sub={`Tendencia: ${ia?.analisis_tecnico?.tendencia || epi?.trend || "ESTABLE"}`} />
+        <ClinicalMiniMetric label="Uptime" value={epi?.uptime_score || (status.uptimePct ? status.uptimePct + "%" : "100%")} variant="atleta" />
+        <ClinicalMiniMetric label="Promedio Hist." value={`${epi?.avg_latency || status.avgLatencyMs || 0}ms`} sub={`Tendencia: ${ia?.analisis_tecnico?.tendencia || epi?.trend || "ESTABLE"}`} />
         <ClinicalMiniMetric label="Fallos Recientes" value={epi?.fallos_recientes || ia?.fallos_recientes || "0"} sub="de últimos 10 checks" variant={(epi?.fallos_recientes || ia?.fallos_recientes) > 0 ? "uci" : "atleta"} />
       </div>
 
@@ -196,7 +196,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
       <footer className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 opacity-40">
          <div className="flex items-center gap-3">
            <p className="text-xs font-mono font-black uppercase tracking-[0.2em]">
-             {ia?.firma || "DR. GRILO · PROTOCOLO LOCAL"} · {ia?._internal?.timestamp || new Date().toISOString()}
+             {(ia?.firma || "DR. GRILO · PROTOCOLO LOCAL").replace("Dr. SRE", "Dr. Grilo")} · {ia?._internal?.timestamp || new Date().toISOString()}
            </p>
          </div>
          <div className="px-4 py-1.5 bg-slate-950 border border-white/10 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2">

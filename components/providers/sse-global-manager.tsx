@@ -29,11 +29,7 @@ export function SSEGlobalManager() {
              try {
                const payload = JSON.parse(event.data)
                
-               // [AUDITORÍA] Rayos X del Socio — Ver estructura real de red
-               console.log("📦 SSE_PAYLOAD_FULL:", JSON.stringify(payload).substring(0, 500));
-
                if (payload.type === 'CONNECTED') {
-                 console.log("🔌 CONEXIÓN_ESTABLECIDA — ID_GRILO:", payload.id);
                  setAnalyzing(false)
                }
 
@@ -52,25 +48,11 @@ export function SSEGlobalManager() {
                 const incomingJobId = diagnostico.job_id || diagnostico.jobId
                 const currentJobId = useDiagnostaStore.getState().currentJobId
 
-                // [LOG] Comparación de ADN de JobID
-                console.log("🔍 JOB_MATCH_DEBUG:", {
-                  recibido: incomingJobId,
-                  esperado: currentJobId,
-                  nodeId: nodeId,
-                  coincide: incomingJobId === currentJobId
-                });
-
-                // REGLA DE PRIVACIDAD DR. GRILO (LIMITADA DURANTE DEBUG):
-                // Aceptamos el diagnóstico incluso con mismatch de JobID para validación visual
+                // FILTRO ESTRICTO DR. GRILO (vSRE)
                 const isMyJob = incomingJobId && incomingJobId === currentJobId
                 const isGlobal = !incomingJobId || diagnostico.is_system
 
-                if (!isMyJob && !isGlobal) {
-                   console.warn("🔒 JOB_MATCH_FAIL — Identidad inconsistente pero aceptando por modo DEBUG.");
-                }
-
-                if (nodeId) {
-                  console.log(`🩺 DIAGNÓSTICO_VÁLIDO — Nodo: ${nodeId} (INYECTANDO...)`);
+                if (nodeId && (isMyJob || isGlobal)) {
                   addDiagnostico(nodeId, diagnostico)
                 }
               }

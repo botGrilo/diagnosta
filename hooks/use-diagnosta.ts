@@ -48,8 +48,7 @@ export function useDiagnosta(endpoints: any[]) {
     
     setLastSnapshotAt(formatted)
 
-    console.log(`⚡ INICIANDO_TRIAJE_IA — Negociando ID con el servidor seguro... — Snapshot Real: ${formatted}`);
-
+    setLastSnapshotAt(formatted)
     try {
       const snapshots = targetData.map(ep => ({
         id: ep.id,
@@ -73,12 +72,7 @@ export function useDiagnosta(endpoints: any[]) {
       if (!response.ok) throw new Error("Error en trigger-analysis");
 
       const { job_id: serverJobId } = await response.json();
-      
-      // Muy importante: Sincronizar con el ID real del servidor para que el SSE coincida
       setCurrentJobId(serverJobId);
-      
-      console.log(`📡 TRACE_SRE_OK (Data Lineage: DB_TIME_LATEST) — ServerJobID: ${serverJobId}`);
-      
     } catch (err) {
       console.error('❌ TRIGGER_SRE_FALLIDO:', err);
     } finally {

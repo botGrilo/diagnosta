@@ -76,8 +76,8 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
               {/* ── MÉTRICAS DE TRIAJE (REUTILIZABLES) ──────────── */}
               <div className="grid grid-cols-2 gap-px bg-white/5 rounded-[2rem] overflow-hidden border border-white/5 shadow-inner">
                  <ClinicalMiniMetric label="Latencia Actual" value={`${latency}ms`} variant={isHealthy ? "atleta" : isWarning ? "amber" : "uci"} />
-                 <ClinicalMiniMetric label="Uptime" value={epi?.uptime_score || "100%"} variant="atleta" />
-                 <ClinicalMiniMetric label="Promedio Hist." value={`${epi?.avg_latency || 0}ms`} />
+                 <ClinicalMiniMetric label="Uptime" value={epi?.uptime_score || (status.uptimePct ? status.uptimePct + "%" : "100%")} variant="atleta" />
+                 <ClinicalMiniMetric label="Promedio Hist." value={`${epi?.avg_latency || status.avgLatencyMs || 0}ms`} />
                  <ClinicalMiniMetric label="Tendencia" value={epi?.trend || ia?.analisis_tecnico?.tendencia || "ESTABLE"} variant={ia?.resumen_clinico?.gravedad === 'ROJO' ? "uci" : "atleta"} />
               </div>
 
@@ -91,9 +91,14 @@ export function ClinicalStatusView({ status, isLoadingAi }: ClinicalStatusViewPr
                     <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_10px_currentColor]" />
                     <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary italic">Diagnóstico SRE</h4>
                  </div>
-                 <p className="text-[13px] md:text-[14px] font-bold italic text-foreground/90 leading-relaxed pr-6 drop-shadow-sm">
-                   "{hasIA ? ia.resumen_clinico.descripcion_humana : "Auditando tráfico en tiempo real. Análisis de persistencia técnica en curso..."}"
-                 </p>
+                  {ia?.resumen_clinico?.titulo_diagnostico && (
+                    <h4 className="text-[11px] font-black uppercase tracking-tighter text-atleta/80 mb-1">
+                      {ia.resumen_clinico.titulo_diagnostico}
+                    </h4>
+                  )}
+                  <p className="text-[13px] md:text-[14px] font-bold italic text-foreground/90 leading-relaxed pr-6 drop-shadow-sm">
+                    "{hasIA ? ia.resumen_clinico.descripcion_humana : "Auditando tráfico en tiempo real. Análisis de persistencia técnica en curso..."}"
+                  </p>
               </div>
 
               {/* ── BADGES REUTILIZABLES ────────────────────────── */}
