@@ -12,6 +12,8 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const justRegistered = params.get("registered") === "1";
+  // Email pre-rellenado cuando viene del registro
+  const emailFromRegister = params.get("email") || "";
 
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
@@ -62,6 +64,7 @@ function LoginForm() {
           <input
             id="login-email" name="email" type="email" required autoComplete="email"
             placeholder="tu@empresa.com"
+            defaultValue={emailFromRegister}
             className="bg-background border border-input rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>

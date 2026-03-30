@@ -71,26 +71,35 @@ export function RegistrationSheet({ isOpen, onClose, onSuccess, endpoint }: Regi
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validated) return
+    if (!formData.name.trim()) {
+      setError("El nombre descriptivo es obligatorio")
+      return
+    }
+    if (!formData.url.startsWith('http://') && !formData.url.startsWith('https://')) {
+      setError("La URL debe comenzar con http:// o https://")
+      return
+    }
 
     setSaving(true)
+    setError(null)
     try {
-      const url = isEditing ? `/api/endpoints/${endpoint.id}` : "/api/endpoints/register"
+      const url = isEditing ? `/api/endpoints/${endpoint.id}` : "/api/endpoints"
       const res = await fetch(url, {
         method: isEditing ? "PATCH" : "POST",
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
       
+      const data = await res.json()
+
       if (!res.ok) {
-        const data = await res.json()
         setError(data.error || "Error al guardar")
       } else {
         onSuccess()
         onClose()
       }
     } catch (err) {
-      setError("Error al guardar")
+      setError("Error de red al conectar con Diagnosta")
     } finally {
       setSaving(false)
     }

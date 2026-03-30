@@ -100,7 +100,22 @@ export default function GlobalStatusPage() {
     }, 10000)
     return () => clearTimeout(timer)
   }, [endpoints, error])
-
+  
+  /* 
+  // PREFETCH OPTIMISTA — El Dr. Grilo analiza la previa mientras el usuario observa
+  useEffect(() => {
+    if (!endpoints || endpoints.length === 0) return;
+    
+    // Disparar prefetch de todos los endpoints en paralelo
+    endpoints.forEach((ep: any) => {
+      fetch(`/api/trigger-diagnostico`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: ep.id, source: 'PREFETCH' })
+      }).catch(err => console.error(`Error en prefetch de ${ep.id}:`, err));
+    });
+  }, [endpoints === undefined]); 
+  */
   const displayData = useMemo(() => {
     
     if (!endpoints) return []
@@ -147,6 +162,7 @@ export default function GlobalStatusPage() {
               key={endpoint.id} 
               status={endpoint}
               isLoadingAi={isAnalyzing && !diagnosticos[endpoint.id]}
+              compact={true}
             />
           ))}
 

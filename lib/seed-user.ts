@@ -18,43 +18,7 @@
 
 import pool from "@/lib/db"
 
-const SEED_ENDPOINTS = [
-  {
-    name: "GitHub API",
-    url: "https://api.github.com",
-    method: "GET",
-    expected_status: 200,
-    check_interval_min: 5,
-  },
-  {
-    name: "PokeAPI",
-    url: "https://pokeapi.co/api/v2/pokemon/pikachu",
-    method: "GET",
-    expected_status: 200,
-    check_interval_min: 5,
-  },
-  {
-    name: "Open-Meteo",
-    url: "https://api.open-meteo.com/v1/forecast?latitude=40.4&longitude=-3.7&current_weather=true",
-    method: "GET",
-    expected_status: 200,
-    check_interval_min: 5,
-  },
-  {
-    name: "CoinGecko Ping",
-    url: "https://api.coingecko.com/api/v3/ping",
-    method: "GET",
-    expected_status: 200,
-    check_interval_min: 5,
-  },
-  {
-    name: "Diagnosta Core",
-    url: "https://diagnosta.botgrilo.es/api/health",
-    method: "GET",
-    expected_status: 200,
-    check_interval_min: 1,
-  },
-]
+const SEED_ENDPOINTS: any[] = []
 
 export async function seedNewUser(userId: string) {
   const client = await pool.connect()

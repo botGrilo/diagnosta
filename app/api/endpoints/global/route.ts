@@ -21,6 +21,7 @@ function mapEndpoint(row: Record<string, any>) {
     uptimePct: row.uptime_pct ?? 100,
     isSuccess: row.is_success ?? null,
     lastCheckedAt: row.last_checked_at || row.checked_at || null, 
+    quick_insights: row.quick_insights ?? null, // <--- Telemetría para la consola
     isSystem: true,
   }
 }
@@ -33,11 +34,17 @@ export async function GET() {
         e.expected_status, e.check_interval_min,
         e.latency_threshold_ms, e.keyword_check,
         e.is_public, e.is_active, e.created_at,
-        s.status_code, s.latency_ms,
-        s.is_success, s.checked_at AS last_checked_at,
+        c.status_code, c.latency_ms,
+        c.is_success, c.checked_at AS last_checked_at,
+        c.quick_insights,
         v.uptime_pct, v.avg_latency_ms
       FROM endpoints e
-      LEFT JOIN v_endpoint_status s ON s.endpoint_id = e.id
+      LEFT JOIN LATERAL (
+        SELECT * FROM checks 
+        WHERE endpoint_id = e.id 
+        ORDER BY checked_at DESC 
+        LIMIT 1
+      ) c ON true
       LEFT JOIN v_uptime_24h v ON v.endpoint_id = e.id
       WHERE e.user_id = (
         SELECT id FROM users

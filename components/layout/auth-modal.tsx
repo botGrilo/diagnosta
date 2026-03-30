@@ -17,24 +17,22 @@ export function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string>(""); // Persistencia de email
   const [pending, startTransition] = useTransition();
 
   // Limpiar errores si el usuario cambia de login a registro
   useEffect(() => {
-    // eslint-disable-next-line
     setError(null);
   }, [mode]);
 
   if (!isOpen) return null;
 
-  // Cerramos el modal limpiando la URL (quitando el ?auth=...)
   function closeModal() {
     router.push("/"); 
     setError(null);
     setSuccessMsg(null);
   }
 
-  // Clicar fuera de la caja blanca cierra el modal
   function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
     if (e.target === e.currentTarget) closeModal();
   }
@@ -60,6 +58,7 @@ export function AuthModal() {
     e.preventDefault();
     setError(null); setSuccessMsg(null);
     const fd = new FormData(e.currentTarget);
+    const emailValue = fd.get("email") as string;
     
     if (fd.get("password") !== fd.get("confirm_password")) {
       setError("Las contraseñas no coinciden.");
@@ -71,8 +70,9 @@ export function AuthModal() {
       if (result?.error) {
         setError(result.error);
       } else if (result?.success) {
+        setRegisteredEmail(emailValue); // Guardar para el pre-relleno
         setSuccessMsg("Cuenta creada. Inicia sesión para continuar.");
-        router.push("?auth=login"); // Pasa a modo login sin recargar la página
+        router.push("?auth=login"); // Cambio de modo vía URL
       }
     });
   }
@@ -84,7 +84,6 @@ export function AuthModal() {
     >
       <div className="relative w-full max-w-sm bg-card border border-border rounded-xl shadow-2xl p-6 flex flex-col gap-6 animate-in zoom-in-95 duration-200">
         
-        {/* Botón de la X para cerrar */}
         <button 
           onClick={closeModal} 
           className="absolute right-4 top-4 text-muted-foreground hover:text-foreground transition-colors"
@@ -92,7 +91,6 @@ export function AuthModal() {
           <X className="h-5 w-5" />
         </button>
 
-        {/* Cabecera del Modal */}
         <div className="flex flex-col items-center gap-2 mt-2">
           <Shield className="h-10 w-10 text-primary" />
           <h2 className="text-2xl font-bold text-foreground tracking-tight">
@@ -103,25 +101,28 @@ export function AuthModal() {
           </p>
         </div>
 
-        {/* Mensaje de Éxito al registrarse */}
         {successMsg && mode === "login" && (
           <div className="bg-primary/10 border border-primary/20 text-primary rounded-lg px-4 py-3 text-sm text-center">
             ✅ {successMsg}
           </div>
         )}
         
-        {/* Error Global */}
         {error && (
           <p className="text-sm text-destructive text-center mb-[-10px]">{error}</p>
         )}
 
-        {/* ---------- FORMULARIO LOGIN ---------- */}
         {mode === "login" && (
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Email</label>
-              <input name="email" type="email" required placeholder="tu@empresa.com"
-                className="bg-background border border-input rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring" />
+              <input 
+                name="email" 
+                type="email" 
+                required 
+                placeholder="tu@empresa.com"
+                defaultValue={registeredEmail} // Aquí ocurre la magia del pre-relleno
+                className="bg-background border border-input rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-ring" 
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">Contraseña</label>
@@ -138,7 +139,6 @@ export function AuthModal() {
           </form>
         )}
 
-        {/* ---------- FORMULARIO REGISTRO ---------- */}
         {mode === "register" && (
           <form onSubmit={handleRegister} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">

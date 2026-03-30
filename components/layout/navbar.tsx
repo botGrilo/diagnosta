@@ -32,23 +32,37 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2)
 }
 
+import { ForenseTooltip } from "@/components/ui/forense-tooltip"
+
+// ... resto de imports
+
 export function Navbar() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const isLoading = status === "loading"
   const isAuthenticated = status === "authenticated"
-  
+  const isExternalPage = pathname && pathname !== "/dashboard" && pathname !== "/"
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container max-w-7xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
         
         {/* Lado Izquierdo: Branding */}
-        <Link href="/" className="flex items-center gap-2.5 hover:scale-105 active:scale-95 transition-all focus:outline-none group">
-          <Shield className="h-6 w-6 text-primary group-hover:rotate-12 transition-transform" />
-          <span className="text-lg font-bold text-foreground tracking-tighter hidden sm:inline-block">
-            Diagnosta
-          </span>
-        </Link>
+        <ForenseTooltip
+          alwaysShow
+          title="Diagnosta — El Guardián"
+          description="El protector de tus APIs."
+          insight={isExternalPage ? "Regresa al panel central para ver la radiografía global del sistema." : undefined}
+          side="bottom"
+          align="start"
+        >
+          <Link href="/" className="flex items-center gap-2.5 hover:scale-105 active:scale-95 transition-all focus:outline-none group">
+            <Shield className="h-6 w-6 text-primary group-hover:rotate-12 transition-transform" />
+            <span className="text-lg font-bold text-foreground tracking-tighter hidden sm:inline-block">
+              Diagnosta
+            </span>
+          </Link>
+        </ForenseTooltip>
 
         {/* Lado Derecho: Acciones y Usuario */}
         <div className="flex items-center gap-2 sm:gap-4">
@@ -58,7 +72,7 @@ export function Navbar() {
           </nav>
 
 
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
 
           {isLoading ? (
             <div className="h-8 w-32 rounded-lg bg-muted animate-pulse hidden sm:block" />
@@ -98,11 +112,20 @@ export function Navbar() {
 
               {/* Menú de Usuario */}
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex h-8 w-8 select-none items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity focus:outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
-                    {getInitials(session?.user?.name)}
-                  </button>
-                </DropdownMenuTrigger>
+                <ForenseTooltip
+                  alwaysShow
+                  title="Identidad Clínica"
+                  description="Tu cuenta y credenciales. Configura tus nodos y gestiona tu sesión de forma segura."
+                  insight="Tus expedientes están vinculados a esta identidad cifrada."
+                  side="bottom"
+                  align="end"
+                >
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex h-8 w-8 select-none items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity focus:outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring">
+                      {getInitials(session?.user?.name)}
+                    </button>
+                  </DropdownMenuTrigger>
+                </ForenseTooltip>
                 <DropdownMenuContent align="end" className="w-56 mt-2 shadow-xl border-border bg-card">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">

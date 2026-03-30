@@ -1,7 +1,6 @@
-const config = {
+export default {
   plugins: {
-    "@tailwindcss/postcss": {},
+    '@tailwindcss/postcss': {},
+    '@csstools/postcss-oklab-function': { preserve: false },
   },
-};
-
-export default config;
+}

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { registerUser } from "@/actions/auth-actions";
 import Link from "next/link";
 import { Shield, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [error,   setError]        = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -23,7 +25,13 @@ export default function RegisterPage() {
 
     startTransition(async () => {
       const result = await registerUser(fd);
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.success) {
+        // Redirigir al login pasando el email para pre-rellenar el campo
+        const email = encodeURIComponent(fd.get('email') as string)
+        router.push(`/login?registered=1&email=${email}`)
+      }
     });
   }
 

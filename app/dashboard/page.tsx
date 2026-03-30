@@ -2,13 +2,17 @@
 
 import { StatusGrid } from "@/components/dashboard/status-grid"
 import { NeuralConsole } from "@/components/dashboard/neural-console"
-import { Activity, Shield, LayoutDashboard, Terminal } from "lucide-react"
+import { ForenseTooltip } from "@/components/ui/forense-tooltip"
+import { Activity, Shield, Terminal } from "lucide-react"
+import { useDiagnostaStore } from "@/lib/store/diagnosta-store"
 
 /**
  * Dashboard Maestro de Diagnosta
  * Versión Modular v2.0 - Optimizado para el Hackathon
  */
 export default function DashboardPage() {
+  const panicMode = useDiagnostaStore(s => s.panicMode) || false
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       
@@ -48,21 +52,29 @@ export default function DashboardPage() {
            </p>
         </div>
 
-
         {/* ── GRID DE MONITOREO (EL MOTOR SWR) ────────────────── */}
         <StatusGrid />
 
         {/* ── CONSOLA NEURONAL (INTELIGENCIA ARTIFICIAL) ───────── */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 text-muted-foreground" />
-             <h2 className="text-xs font-mono text-muted-foreground font-bold uppercase tracking-[0.2em]">
-              Análisis del Sistema (Neural Console)
-            </h2>
+        <section className="space-y-4 pt-10">
+        {/* CAPÍTULO III — Análisis del Sistema (Neural Console) */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] tabular-nums">III</span>
+              <span className="text-atleta font-mono text-sm">&gt;_</span>
+              <ForenseTooltip
+                title="Cortex Digital — Electrocardiograma"
+                description="Flujo en tiempo real de cada pulso registrado. RED mide la velocidad de conexión. PROTOCOLO verifica que el servidor respondió correctamente."
+                insight="Si el flujo se detiene, la Ronda Médica está en pausa."
+              >
+                <h2 className="text-lg md:text-2xl font-black uppercase tracking-[0.15em] text-foreground flex items-center gap-2 cursor-help">
+                  Análisis del <span className="text-white/60 italic">Sistema</span>
+                </h2>
+              </ForenseTooltip>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
           </div>
-          <div className="rounded-2xl border border-border/40 overflow-hidden shadow-2xl shadow-primary/5">
-            <NeuralConsole />
-          </div>
+          <NeuralConsole panicMode={panicMode} />
         </section>
 
       </div>

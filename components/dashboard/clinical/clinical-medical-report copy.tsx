@@ -1,11 +1,13 @@
 "use client"
 import React, { useState } from 'react'
 import { Shield, Zap, Terminal, Database, Clock, Fingerprint, FileDown, Loader2 } from 'lucide-react'
+import { DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { ClinicalMiniMetric } from './clinical-mini-metric'
 import { ClinicalBadge } from './clinical-badge'
 import { ClinicalECGBars } from './clinical-ecg-bars'
-import { generateClinicalReportHTML } from './clinical-report-generator'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 interface ClinicalMedicalReportProps { status: any }
 
@@ -18,36 +20,60 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
   const historyValues = recentHistory.map((h: any) => h.latency_ms)
   const minLatency = historyValues.length > 0 ? Math.min(...historyValues) : 0
   const maxLatency = historyValues.length > 0 ? Math.max(...historyValues) : 0
+  const [exporting, setExporting] = useState(false)
 
   const gravedad = ia?.resumen_clinico?.gravedad || epi?.gravedad || 'VERDE'
   const gravedadColor = gravedad === 'ROJO' ? 'bg-red-500/10 border-red-500/60 text-red-400'
     : gravedad === 'AMARILLO' ? 'bg-amber-500/10 border-amber-500/60 text-amber-400'
     : 'bg-atleta/10 border-atleta/60 text-atleta'
 
+  // ── FUNCIÓN EXPORTADOR PDF (CORREGIDA) ──────────────────────────
+   const exportPDF = async () => {
+    // Bloqueamos el botón para evitar múltiples clics
+    setExporting(true);
+    try {
+      const modal = document.getElementById('expediente-clinico');
+      if (!modal) {
+        console.error("No se encontró el nodo del expediente");
+        return;
+      }
+      
+      // Capturamos el canvas con mayor tolerancia a fuentes/imágenes externas
+      const canvas = await html2canvas(modal, { 
+        backgroundColor: '#01040a',
+        scale: 2, // Calidad retina
+        useCORS: true,
+        allowTaint: true,
+        logging: false 
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      // Calculamos la altura proporcional para que quepa en el A4
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`diagnosta-${status.name?.replace(/\s+/g, '-') || 'reporte'}.pdf`);
+      
+    } catch (err) {
+      console.error("Error crítico en la generación del PDF:", err);
+      alert("Error al generar PDF. Revisa la consola SRE.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+
   const protocolo = ia?.protocolo_intervencion || []
-
-  const exportPDF = () => {
-    const printWindow = window.open('', '_blank', 'width=900,height=800')
-    if (!printWindow) return
-
-    const html = generateClinicalReportHTML(status, ia, epi, latency, protocolo)
-    printWindow.document.write(html)
-    printWindow.document.close()
-  }
-
   const protocoloLargo = protocolo.length >= 2
-
-  // Reemplaza cualquier URL placeholder con la URL real del endpoint
-  const limpiarComando = (cmd: string) => {
-    if (!cmd) return cmd
-    return cmd
-      .replace(/https?:\/\/\[[A-Z_\]]+/g, status.url || 'https://endpoint')
-      .replace(/https?:\/\/[^\s"'\n\\]+/g, status.url || 'https://endpoint')
-  }
 
   return (
     <div id="expediente-clinico" className="space-y-8 py-4 bg-[#01040a]">
-      {/* HEADER */}
+      <DialogTitle className="sr-only">{status.name} — Expediente Clínico</DialogTitle>
+      <DialogDescription className="sr-only">Informe forense para {status.name}</DialogDescription>
+
+      {/* ── HEADER ── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/10 pb-6">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
@@ -70,7 +96,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
         </div>
       </div>
 
-      {/* MÉTRICAS */}
+      {/* ── MÉTRICAS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/10 rounded-2xl overflow-hidden border border-white/10">
         <ClinicalMiniMetric label="Latencia Actual" value={`${latency}ms`} sub="Ciclo HTTPS completo" variant={latency < 300 ? "atleta" : latency < 1200 ? "amber" : "uci"} />
         <ClinicalMiniMetric label="Uptime" value={epi?.uptime_score || "100%"} variant="atleta" />
@@ -78,12 +104,13 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
         <ClinicalMiniMetric label="Fallos Recientes" value={epi?.fallos_recientes ?? "0"} sub="de últimos 10 checks" variant={epi?.fallos_recientes > 0 ? "uci" : "atleta"} />
       </div>
 
-      {/* DOS COLUMNAS */}
+      {/* ── LAYOUT DOS COLUMNAS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* COLUMNA IZQUIERDA */}
         <div className="space-y-8">
 
+          {/* Resumen Clínico */}
           <Section title="Resumen Clínico">
             <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-atleta/60" />
@@ -112,9 +139,10 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
             </div>
           </Section>
 
+          {/* Análisis Estadístico */}
           {epi?.analisis_junior && (
             <Section title="Análisis Estadístico">
-              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10">
+              <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-0">
                 <StatRow label="Desviación estándar" value={`${epi.analisis_junior.std_dev}ms — ${epi.analisis_junior.estabilidad}`} />
                 <StatRow label="Percentil actual" value={`${epi.analisis_junior.percentil}% — ${epi.analisis_junior.percentil_label}`} />
                 <StatRow label="Rango histórico" value={`${epi.analisis_junior.min_latency}ms – ${epi.analisis_junior.max_latency}ms`} />
@@ -125,6 +153,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
             </Section>
           )}
 
+          {/* Análisis Técnico */}
           <Section title="Análisis Técnico">
             <div className="space-y-3">
               <TechnicalField label="Causa raíz probable" value={ia?.analisis_tecnico?.causa_raiz_probable || "Latencia de red estándar."} />
@@ -137,6 +166,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
             </div>
           </Section>
 
+          {/* Pronóstico */}
           <Section title="Pronóstico">
             <div className="grid grid-cols-2 gap-3">
               <TechnicalField label="Tiempo recuperación" value={ia?.pronostico?.tiempo_recuperacion || "N/A"} />
@@ -144,6 +174,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
             </div>
           </Section>
 
+          {/* Historial */}
           <Section title="Historial Clínico (Últimas 10 mediciones)">
             <ClinicalECGBars data={historyValues} label={`SNAPSHOT_ID: ${status.id?.slice(0, 8)}`} />
             <div className="grid grid-cols-2 gap-3 mt-3">
@@ -161,7 +192,7 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
 
         {/* COLUMNA DERECHA */}
         <div className="space-y-8">
-
+          {/* Protocolo */}
           <Section title="Protocolo de Intervención">
             <div className="space-y-4">
               {hasIA && protocolo.length > 0 ? (
@@ -175,25 +206,38 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
                     </div>
                     <p className="text-xs font-bold text-white/80 leading-relaxed">{step.accion}</p>
                     {step.comando && (
-                      <div className="space-y-3">
-                        {/* Comando del protocolo */}
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1.5">Comando</p>
-                          <code className="block text-[10px] font-mono text-atleta bg-slate-950 p-3 rounded-xl border border-white/5 whitespace-pre-wrap break-all leading-relaxed">
-                            {limpiarComando(step.comando)}
-                          </code>
-                        </div>
+                      <div className="space-y-2">
+                        <code className="block text-[11px] font-mono text-atleta bg-slate-950 p-4 rounded-xl border border-atleta/20 whitespace-pre-wrap break-all leading-relaxed">
+  {step.comando
+    .replace(/https?:\/\/[^\s"']+/g, status.url || 'https://endpoint')
+    .replace(/\[URL_[^\]]+\]/g, status.url || 'https://endpoint')
+    .replace('https://endpoint', status.url || 'https://endpoint')}
+</code>
 
-                        {/* Ejemplo ejecutable solo si el paso tiene curl y hay URL real */}
+{step.comando.toLowerCase().includes('curl') && status.url && (
+  <div className="mt-3 p-4 rounded-xl border border-atleta/30 bg-atleta/5 space-y-3">
+    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-atleta/60">
+      Ejemplo ejecutable con datos reales de esta radiografía
+    </p>
+    <code className="block text-[11px] font-mono text-white bg-slate-950 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-all leading-relaxed">
+      {`curl -w "\\nTiempo: %{time_total}s\\n" -o /dev/null -s ${status.url}`}
+    </code>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 border-t border-atleta/10">
+      <span className="text-[9px] font-mono text-slate-500">Diagnosta midió:</span>
+      <span className="text-sm font-black text-atleta">{status.latency_ms}ms</span>
+      <span className="text-[9px] font-mono text-slate-600">— ejecuta y compara el resultado</span>
+    </div>
+  </div>
+)}
                         {step.comando.toLowerCase().includes('curl') && status.url && (
-                          <div className="p-4 rounded-xl border border-atleta/30 bg-atleta/5 space-y-3">
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-atleta/70">
-                              Ejemplo con datos reales — copia y pega en tu terminal
+                          <div className="mt-3 p-4 rounded-xl border border-atleta/30 bg-atleta/5 space-y-2">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-atleta/60">
+                              Ejemplo ejecutable — copia y pega en tu terminal
                             </p>
-                            <code className="block text-[11px] font-mono text-white bg-slate-950 p-3 rounded-lg border border-atleta/10 whitespace-pre-wrap break-all leading-loose select-all cursor-text">
+                            <code className="block text-[11px] font-mono text-white bg-slate-950 p-3 rounded-lg border border-white/5 whitespace-pre-wrap break-all leading-relaxed">
                               {`curl -w "\\nTiempo: %{time_total}s\\n" -o /dev/null -s ${status.url}`}
                             </code>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 border-t border-atleta/10">
+                            <div className="flex items-center gap-2 pt-1">
                               <span className="text-[9px] font-mono text-slate-500">Diagnosta midió:</span>
                               <span className="text-sm font-black text-atleta">{status.latency_ms}ms</span>
                               <span className="text-[9px] font-mono text-slate-600">— ¿obtienes un resultado similar?</span>
@@ -224,23 +268,23 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
             {epi?.trend_status === 'WARNING' && <ClinicalBadge text="ADVERTENCIA" variant="amber" />}
           </div>
 
-          {/* BLOQUE PDF */}
+          {/* PDF BLOCK — siempre visible, se adapta */}
           <div className={cn(
             "rounded-2xl border transition-all duration-300",
-            protocoloLargo ? "border-atleta/20 bg-atleta/5 p-5" : "border-atleta/30 bg-atleta/5 p-8"
+            protocoloLargo
+              ? "border-atleta/20 bg-atleta/5 p-5"
+              : "border-atleta/30 bg-atleta/5 p-8"
           )}>
-            {/* Preview del PDF */}
+            {/* Preview visual del PDF */}
             <div className={cn(
               "mb-4 rounded-xl border border-atleta/20 bg-slate-950 overflow-hidden",
               protocoloLargo ? "h-24" : "h-40"
             )}>
-              <div className="p-2.5 border-b border-atleta/10 flex items-center gap-2">
+              <div className="p-3 border-b border-atleta/10 flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-red-500/60" />
                 <div className="h-2 w-2 rounded-full bg-amber-500/60" />
                 <div className="h-2 w-2 rounded-full bg-atleta/60" />
-                <span className="text-[8px] font-mono text-slate-600 ml-2">
-                  diagnosta-{status.name?.replace(/\s+/g, '-')}.pdf
-                </span>
+                <span className="text-[8px] font-mono text-slate-600 ml-2">diagnosta-{status.name?.replace(/\s+/g, '-')}.pdf</span>
               </div>
               <div className="p-3 space-y-1.5">
                 <div className="h-2 w-3/4 bg-atleta/20 rounded" />
@@ -270,23 +314,27 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
               </div>
               <button
                 onClick={exportPDF}
+                disabled={exporting}
                 className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl
                            border border-atleta/40 bg-atleta/10
                            hover:bg-atleta/20 active:scale-95
+                           disabled:opacity-50 disabled:cursor-not-allowed
                            transition-all duration-200"
               >
-                <FileDown className="h-4 w-4 text-atleta" />
+                {exporting
+                  ? <Loader2 className="h-4 w-4 text-atleta animate-spin" />
+                  : <FileDown className="h-4 w-4 text-atleta" />
+                }
                 <span className="text-[10px] font-black uppercase tracking-widest text-atleta">
-                  Exportar
+                  {exporting ? "Generando..." : "Exportar"}
                 </span>
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* ── FOOTER ── */}
       <footer className="pt-6 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3">
         <p className="text-xs font-mono font-black uppercase tracking-[0.15em] text-slate-400">
           {ia?.firma || "DR. GRILO · PROTOCOLO LOCAL"}
@@ -314,9 +362,15 @@ function Section({ title, children }: any) {
 
 function StatRow({ label, value, highlight = false, last = false }: any) {
   return (
-    <div className={cn("flex justify-between items-start gap-4 py-2.5", !last && "border-b border-white/5")}>
+    <div className={cn(
+      "flex justify-between items-start gap-4 py-2.5",
+      !last && "border-b border-white/5"
+    )}>
       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0 pt-0.5">{label}</span>
-      <span className={cn("text-xs font-bold text-right leading-snug max-w-[55%]", highlight ? "text-atleta" : "text-white/80")}>
+      <span className={cn(
+        "text-xs font-bold text-right leading-snug max-w-[55%]",
+        highlight ? "text-atleta" : "text-white/80"
+      )}>
         {value}
       </span>
     </div>
@@ -338,7 +392,10 @@ function InfoField({ label, value, highlight = false, positive = false }: any) {
   return (
     <div className="flex justify-between items-center py-2 border-b border-white/5">
       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>
-      <span className={cn("text-[10px] font-black uppercase tracking-widest", highlight ? "text-red-400" : positive ? "text-atleta" : "text-white/80")}>
+      <span className={cn(
+        "text-[10px] font-black uppercase tracking-widest",
+        highlight ? "text-red-400" : positive ? "text-atleta" : "text-white/80"
+      )}>
         {value}
       </span>
     </div>

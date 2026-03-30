@@ -48,12 +48,39 @@ export function SSEGlobalManager() {
                 const incomingJobId = diagnostico.job_id || diagnostico.jobId
                 const currentJobId = useDiagnostaStore.getState().currentJobId
 
-                // FILTRO ESTRICTO DR. GRILO (vSRE)
-                const isMyJob = incomingJobId && incomingJobId === currentJobId
-                const isGlobal = !incomingJobId || diagnostico.is_system
-
-                if (nodeId && (isMyJob || isGlobal)) {
+                if (nodeId) {
                   addDiagnostico(nodeId, diagnostico)
+                }
+
+                 // Soporta ambos formatos que puede enviar n8n:
+                 // 1. quick_insights como string JSON (array serializado)
+                 // 2. red_insight / prot_insight como campos planos separados
+                 const insights: { cat: 'RED' | 'PROT'; msg: string }[] = []
+
+                 if (diagnostico?.quick_insights) {
+                   const parsed = typeof diagnostico.quick_insights === 'string'
+                     ? JSON.parse(diagnostico.quick_insights)
+                     : diagnostico.quick_insights
+                   insights.push(...parsed)
+                 }
+
+                 if (diagnostico?.red_insight)  insights.push({ cat: 'RED',  msg: diagnostico.red_insight })
+                 if (diagnostico?.prot_insight) insights.push({ cat: 'PROT', msg: diagnostico.prot_insight })
+
+                 if (insights.length > 0) {
+                   useDiagnostaStore.getState().addConsoleLines({
+                     name: diagnostico.name,
+                     timestamp: diagnostico.checked_at || new Date().toISOString(),
+                     quick_insights: insights
+                   })
+                 }
+              }
+
+              if (payload.type === 'NEURAL_CONSOLE_UPDATE') {
+                console.log('📡 NEURAL_UPDATE_RECIBIDO (Deprecado - Usar DIAGNOSTICO_NEW):', payload)
+                const data = Array.isArray(payload.data) ? payload.data[0] : payload.data
+                if (data) {
+                  useDiagnostaStore.getState().addConsoleLines(data)
                 }
               }
              } catch (err) {

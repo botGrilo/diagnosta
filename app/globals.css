@@ -289,3 +289,53 @@ html {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* Entrada de línea nueva en la Consola Neuronal */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media print {
+  /* Mostrar todo el body primero */
+  body { visibility: visible !important; }
+  
+  /* Ocultar TODO excepto el expediente */
+  body > *:not([data-radix-portal]) { display: none !important; }
+  [data-radix-portal] > * > * > *:not([role="dialog"]) { display: none !important; }
+  
+  /* Mostrar el dialog y su contenido */
+  [role="dialog"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+    border-radius: 0 !important;
+    padding: 2rem !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  [role="dialog"] * { visibility: visible !important; }
+
+  /* Colores legibles */
+  .text-atleta, [class*="text-atleta"] { color: #0d9488 !important; }
+  [class*="text-white"] { color: #111827 !important; }
+  [class*="text-slate"] { color: #374151 !important; }
+  [class*="bg-white"] { background: #f9fafb !important; }
+  [class*="bg-slate-950"] { background: #f1f5f9 !important; }
+  [class*="border-white"] { border-color: #d1d5db !important; }
+  code { background: #f1f5f9 !important; color: #0f172a !important; border: 1px solid #e2e8f0 !important; }
+
+  /* Ocultar botones y elementos no imprimibles */
+  button { display: none !important; }
+  [class*="animate"] { animation: none !important; }
+  
+  /* Forzar saltos de página correctos */
+  #expediente-clinico { page-break-inside: avoid; }
+}
