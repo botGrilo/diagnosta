@@ -32,10 +32,12 @@ export function RedGlobal() {
       <div
         onClick={handleClick}
         className={cn(
-          "group relative flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 cursor-pointer",
+          "group relative flex items-center gap-3 px-5 py-2.5 rounded-full transition-all duration-500 cursor-pointer",
+          "border border-white/10 bg-white/[0.03] backdrop-blur-md shadow-lg shadow-black/20",
+          "hover:border-atleta/40 hover:bg-atleta/5 hover:shadow-atleta/10 hover:-translate-y-0.5 active:scale-95",
           isRedGlobalActive 
-            ? "bg-atleta/10 text-atleta border border-atleta/20 shadow-[0_0_15px_rgba(0,242,255,0.1)]" 
-            : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+            ? "bg-atleta/10 text-atleta border-atleta/40 shadow-[0_0_25px_rgba(0,242,255,0.15)]" 
+            : "text-muted-foreground/50 hover:text-foreground"
         )}
       >
         <div className="relative flex h-2 w-2">

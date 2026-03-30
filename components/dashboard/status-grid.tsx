@@ -118,42 +118,44 @@ export function StatusGrid() {
     }
   }, [triggerRequested, mineData, triggerAnalysis, setTriggerRequested])
 
+  // PASO 3: Actualizar modal automáticamente cuando llega el diagnóstico (SSE)
+  useEffect(() => {
+    if (!selectedEndpoint?._loading) return
+    const ia = diagnosticos[selectedEndpoint.id]
+    if (!ia) return
+    
+    console.log('✨ SYNC_MODAL — Diagnóstico recibido, actualizando expediente...')
+    setSelectedEndpoint((prev: any) => ({
+      ...prev,
+      _loading: false,
+      ai_recipe: ia.ai_recipe,
+      epidemiology_report: ia.epidemiology_report,
+    }))
+  }, [diagnosticos, selectedEndpoint?.id, selectedEndpoint?._loading])
+
   const handleDelete = async () => {
     if (!deletingEndpoint) return
 
     const endpointId = deletingEndpoint.id || deletingEndpoint.endpoint_id
-    console.log('🗑️ DELETE_INTENT:', endpointId, deletingEndpoint)
-
-    if (!endpointId) {
-      console.error('❌ ID undefined — no se puede eliminar')
-      setDeletingEndpoint(null)
-      return
-    }
+    if (!endpointId) { setDeletingEndpoint(null); return }
 
     try {
-      const res = await fetch(`/api/endpoints/${endpointId}`, {
-        method: 'DELETE',
-      })
-
-      console.log('🗑️ DELETE_STATUS:', res.status)
+      const res = await fetch(`/api/endpoints/${endpointId}`, { method: 'DELETE' })
+      console.log('DELETE_STATUS:', res.status)
 
       if (res.ok) {
-        const data = await res.json().catch(() => ({}));
-        console.log('✅ DELETE_SUCCESS — Filas afectadas:', data.affected);
-        // Si no afectó a ninguna fila, avisar por consola
-        if (data.affected === 0) {
-          console.error('⚠️ ALERTA: El nodo existe pero el usuario no es el dueño (o ya estaba borrado).');
-        }
-        // Filtrado optimista inmediato — la tarjeta desaparece sin esperar refetch
-        mutateMine(
-          (current: any[] | undefined) =>
-            (current ?? []).filter((e: any) => e.id !== endpointId),
-          { revalidate: true } // confirma con el servidor en background
+        // Cerrar modal primero — UX inmediata
+        setDeletingEndpoint(null)
+        // Filtro optimista local: revalidate:false evita refetch que devolvería el nodo aún en caché
+        await mutateMine(
+          (current: any[]) => current?.filter((e: any) => e.id !== endpointId),
+          { revalidate: false }
         )
+        // Revalidar en background para confirmar estado real con Postgres
+        setTimeout(() => mutateMine(), 1000)
       }
     } catch (err) {
-      console.error('❌ Error de red:', err)
-    } finally {
+      console.error('Error:', err)
       setDeletingEndpoint(null)
     }
   }
@@ -284,7 +286,7 @@ export function StatusGrid() {
                 ms={endpoint.latencyMs}
                 response_preview={endpoint.response_preview}
                 isReference={true}
-                onClick={() => setSelectedEndpoint(endpoint)}
+                // Tarea 4: pilares no son interactivos — sin onClick ni modal
               />
             ))}
           </div>
@@ -348,7 +350,16 @@ export function StatusGrid() {
                 ms={endpoint.latencyMs}
                 response_preview={endpoint.response_preview}
                 iaReport={diagnosticos[endpoint.id]}
-                onDiagnose={() => triggerAnalysis([endpoint])}
+                onDiagnose={() => {
+                  // PASO 2: Abrir modal con spinner inmediatamente y solicitar a n8n
+                  setSelectedEndpoint({
+                    ...endpoint,
+                    latency_ms: endpoint.latencyMs,
+                    status_code: endpoint.statusCode,
+                    _loading: true
+                  })
+                  triggerAnalysis([endpoint])
+                }}
                 onEdit={() => {
                   setEditingEndpoint(endpoint)
                   setSheetOpen(true)
@@ -356,8 +367,17 @@ export function StatusGrid() {
                 onDelete={() => setDeletingEndpoint(endpoint)}
                 onClick={() => {
                   const ia = diagnosticos[endpoint.id];
-                  if (ia) setSelectedEndpoint({ ...endpoint, ia_recipe: ia.ai_recipe, epidemiology: ia.epidemiology_report });
-                  else setSelectedEndpoint(endpoint);
+                  if (ia) {
+                    // Acción para "Ver Expediente": Cero tokens, carga inmediata desde memoria
+                    setSelectedEndpoint({
+                      ...endpoint,
+                      ai_recipe: ia.ai_recipe,
+                      epidemiology_report: ia.epidemiology_report,
+                      latency_ms: endpoint.latencyMs,
+                      status_code: endpoint.statusCode,
+                      _loading: false
+                    });
+                  }
                 }}
               />
             ))}

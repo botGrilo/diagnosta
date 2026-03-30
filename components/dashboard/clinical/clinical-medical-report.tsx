@@ -36,6 +36,23 @@ export function ClinicalMedicalReport({ status }: ClinicalMedicalReportProps) {
   }
 
   const protocoloLargo = protocolo.length >= 2
+  const isLoading = status?._loading && !hasIA
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4 bg-[#01040a] min-h-[400px]">
+        <div className="h-10 w-10 rounded-full border-2 border-atleta border-t-transparent animate-spin" />
+        <div className="text-center space-y-2">
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-atleta animate-pulse">
+            Dr. Grilo analizando...
+          </p>
+          <p className="text-[10px] text-slate-500 font-mono italic">
+            Auditando telemetría forense de {status.name}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Reemplaza cualquier URL placeholder con la URL real del endpoint
   const limpiarComando = (cmd: string) => {

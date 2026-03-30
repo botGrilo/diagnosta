@@ -43,15 +43,13 @@ export function StatusCard({
           "border border-border/40",
           "bg-card/30 backdrop-blur-sm md:backdrop-blur-2xl",
           "p-5 md:p-10",
-          "transition-all duration-700",
-          "md:hover:scale-[1.03] md:hover:-translate-y-3",
+          // Tarea 1: caja estática — sin hover, sin cursor, sin onClick
           isCriticalIA 
             ? "border-uci/60 md:shadow-[0_40px_80px_-20px_rgba(239,68,68,0.3)]" 
-            : "md:hover:border-primary/60 md:hover:shadow-[0_40px_80px_-20px_rgba(0,242,255,0.2)]",
-          "cursor-pointer active:scale-95",
+            : "",
           isReference ? "border-l-4 border-l-primary/20" : "border-l-4 border-l-atleta/20"
         )}
-        onClick={onClick}
+        // onClick eliminado — interactividad vive solo en el botón inferior
       >
         {/* MENÚ DE GESTIÓN (⋮) */}
         {!isReference && !ia?.is_system && (
@@ -116,10 +114,10 @@ export function StatusCard({
                 {ms ?? '--'}<span className="text-xs not-italic font-black opacity-30 ml-0.5">MS</span>
               </div>
               <p className={cn(
-                "text-xs font-black uppercase tracking-widest mt-2 whitespace-pre-line line-clamp-2 min-h-[2.2rem]", 
+                "text-[10px] font-black uppercase tracking-widest mt-1 leading-tight text-right", 
                 isCriticalIA ? "text-uci" : status.color
               )}>
-                 {isCriticalIA ? "UCI — CRITICO" : status.label}
+                 {isCriticalIA ? "UCI — CRÍTICO" : status.label}
               </p>
             </div>
           </div>
@@ -138,33 +136,50 @@ export function StatusCard({
           )}
         </div>
 
-        {/* PARTE INFERIOR: Acciones */}
+        {/* PARTE INFERIOR: Acciones (3 Estados Lógicos para nodos de usuario) */}
         {!isReference ? (
-          <ForenseTooltip
-            disabled={!!ia}
-            title="Consulta Urgente"
-            description="Activa un diagnóstico inmediato para este nodo. No esperes la próxima Ronda Médica."
-            insight="El análisis lo realiza el Dr. Grilo — causa raíz, protocolo e intervención."
-            side="top"
-          >
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (ia) onClick?.(); 
-                else onDiagnose?.();
-              }}
-              className={cn(
-                "mt-8 w-full group/btn flex items-center justify-center gap-2 py-4 rounded-2xl border transition-all font-black text-[10px] uppercase tracking-widest",
-                ia 
-                  ? "border-primary/20 bg-primary/5 text-primary/60 hover:bg-primary/10 hover:text-primary" 
-                  : "border-atleta/20 bg-atleta/5 text-atleta/60 hover:text-atleta hover:bg-atleta/10"
-              )}
-            >
-              <Brain className="h-3.5 w-3.5 group-hover/btn:scale-110 transition-transform" />
-              {ia ? "Ver expediente clínico completo" : "Solicitar diagnóstico Dr. Grilo"}
-            </button>
-          </ForenseTooltip>
-        ) : isReference ? (
+          (() => {
+            // ESTADO 1: Sin checks aún (Scheduler no ha pasado)
+            if (!ms) return (
+              <div className="mt-8 w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-white/5 bg-white/[0.02]">
+                <div className="h-1.5 w-1.5 rounded-full bg-atleta/40 animate-ping" />
+                <span className="font-black text-[9px] uppercase tracking-widest text-slate-600">
+                  Esperando primera Ronda Médica
+                </span>
+              </div>
+            )
+
+            // ESTADO 2: Tiene checks pero sin diagnóstico IA solicitado
+            if (!ia) return (
+              <ForenseTooltip
+                title="Consulta Urgente"
+                description="Activa un diagnóstico inmediato para este nodo. No esperes la próxima Ronda Médica."
+                insight="El análisis lo realiza el Dr. Grilo — causa raíz, protocolo e intervención."
+                side="top"
+              >
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDiagnose?.() }}
+                  className="mt-8 w-full group/btn flex items-center justify-center gap-2 py-4 rounded-[1.3rem] border border-atleta/20 bg-atleta/5 text-atleta/60 hover:text-atleta hover:bg-atleta/10 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-95 transition-all duration-300 font-black text-[10px] uppercase tracking-widest cursor-pointer shadow-[0_4px_20px_rgba(45,212,191,0.05)]"
+                >
+                  <Brain className="h-3.5 w-3.5 group-hover/btn:scale-110 transition-transform" />
+                  Consultar al Dr. Grilo
+                </button>
+              </ForenseTooltip>
+            )
+
+            // ESTADO 3: Tiene diagnóstico IA en memoria
+            return (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onClick?.() }}
+                className="mt-8 w-full group/btn flex items-center justify-center gap-2 py-4 rounded-[1.3rem] border border-white/20 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white hover:border-white/40 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-95 transition-all duration-300 font-black text-[10px] uppercase tracking-widest cursor-pointer shadow-[0_4px_20px_rgba(255,255,255,0.02)]"
+              >
+                <Brain className="h-3.5 w-3.5 group-hover/btn:scale-110 transition-transform" />
+                Ver Expediente Clínico Completo
+              </button>
+            )
+          })()
+        ) : (
+          /* Visual para Pilares de Referencia */
           <div className="mt-8 pt-6 border-t border-white/5 opacity-20">
              <div className="flex items-end gap-1.5 h-10 px-2 justify-center">
                {[0.3, 0.5, 0.2, 0.8, 0.4].map((h, i) => (
@@ -172,7 +187,7 @@ export function StatusCard({
                ))}
              </div>
           </div>
-        ) : null}
+        )}
 
         <div className={cn(
           "absolute bottom-0 left-0 h-1 w-full opacity-20 group-hover:opacity-100 transition-all duration-700", 

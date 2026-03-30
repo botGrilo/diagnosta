@@ -3,7 +3,7 @@
 import { X, Terminal, Code2, Clock, Globe, ShieldAlert, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { PulseIndicator } from "./pulse-indicator"
-import { ClinicalStatusView } from "./clinical/clinical-status-view"
+import { ClinicalMedicalReport } from "./clinical/clinical-medical-report"
 import { ForenseTooltip } from "@/components/ui/forense-tooltip"
 
 interface StatusModalProps {
@@ -38,9 +38,9 @@ export function StatusModal({ isOpen, onClose, endpoint }: StatusModalProps) {
           </button>
         </div>
 
-        {/* ── CUERPO DEL REPORTE CLÍNICO COMPLETO ── */}
-        <div className="max-h-[78vh] overflow-y-auto custom-scrollbar bg-black/50">
-           <ClinicalStatusView status={endpoint as any} />
+        {/* Expediente clínico completo — ClinicalMedicalReport directo, sin Dialog anidado */}
+        <div className="max-h-[78vh] overflow-y-auto custom-scrollbar bg-black/50 px-8 py-6">
+           <ClinicalMedicalReport status={endpoint as any} />
         </div>
 
         {/* Footer: Firma Médica y Sync SRE */}

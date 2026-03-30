@@ -4,10 +4,10 @@
  */
 
 export const STATUS_CONFIG = {
-  ATLETA: { label: 'ATLETA \n CONEXIÓN ÓPTIMA', color: 'text-atleta', bg: 'bg-atleta', limit: 300, score: 100 },
-  NORMAL: { label: 'NORMAL \n TRÁFICO ESTÁNDAR', color: 'text-normal', bg: 'bg-normal', limit: 600, score: 95 },
-  FATIGADO: { label: 'FATIGADO \n DEGRADACIÓN EN RUTA', color: 'text-fatigado', bg: 'bg-fatigado', limit: 1200, score: 70 },
-  UCI: { label: 'UCI (CRÍTICO) \n LATENCIA EXTREMA', color: 'text-uci', bg: 'bg-uci', limit: Infinity, score: 40 },
+  ATLETA: { label: 'ATLETA — CONEXIÓN ÓPTIMA', color: 'text-atleta', bg: 'bg-atleta', limit: 300, score: 100 },
+  NORMAL: { label: 'NORMAL — TRÁFICO ESTÁNDAR', color: 'text-normal', bg: 'bg-normal', limit: 600, score: 95 },
+  FATIGADO: { label: 'FATIGADO — DEGRADACIÓN EN RUTA', color: 'text-fatigado', bg: 'bg-fatigado', limit: 1200, score: 70 },
+  UCI: { label: 'UCI (CRÍTICO) — LATENCIA EXTREMA', color: 'text-uci', bg: 'bg-uci', limit: Infinity, score: 40 },
 }
 
 export function getStatusDetails(ms: number | null, isSuccess: boolean | null, response: string | null) {

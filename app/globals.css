@@ -54,10 +54,10 @@
   --color-surface-raised: var(--surface-raised);
 
   /* ── ADN CROMÁTICO SRE: Calibración Final ── */
-  --color-atleta: #00f2ff;   /* Cyan: El "Cero Real" de Diagnosta */
-  --color-normal: #10b981;   /* Emerald: Operación Estándar OK */
-  --color-fatigado: #f97316; /* Amber: Degradación detectable */
-  --color-uci: #ef4444;      /* Red Carmesí: Fallo Crítico / UCI */
+  --color-atleta: #00f2ff;   /* Cyan: Cero Real — Brillo absoluto */
+  --color-normal: #34d399;   /* Emerald 400: Operación Estándar OK — Vibrante */
+  --color-fatigado: #fbbf24; /* Amber 400: Degradación detectable — Punchy */
+  --color-uci: #f87171;      /* Red 400: Fallo Crítico / UCI — Máxima alerta */
 }
 
 /* ─────────────────────────────────────────────────────────────────

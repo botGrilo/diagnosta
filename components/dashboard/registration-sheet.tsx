@@ -234,7 +234,7 @@ export function RegistrationSheet({ isOpen, onClose, onSuccess, endpoint }: Regi
                validated ? "bg-primary text-primary-foreground hover:bg-atleta" : "bg-white/10 text-muted-foreground border border-white/5"
              )}
            >
-              {saving ? "Procesando..." : isEditing ? "Guardar Cambios" : "Activar Vigilancia Dr. Grilo"}
+              {saving ? "Procesando..." : isEditing ? "Guardar Cambios" : "Activar Vigilancia"}
            </button>
         </form>
       </div>
