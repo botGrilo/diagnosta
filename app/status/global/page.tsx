@@ -94,6 +94,37 @@ export default function GlobalStatusPage() {
     }
   }, [diagnosticos, isAnalyzing, snapshotRaw]);
 
+  // ── TUBERÍA DE TELEMETRÍA EN TIEMPO REAL (SSE) ──────────────────────
+  useEffect(() => {
+    console.log("🦾 [SRE] Iniciando conexión con el túnel del Dr. Grilo...");
+    const eventSource = new EventSource('/api/diagnostico-push');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'CONNECTED') {
+          console.log(`✅ [SRE] Túnel establecido. Client ID: ${payload.id}`);
+        } else if (payload.type === 'DIAGNOSTICO_NEW') {
+          console.log(`🩺 [SRE] Radiografía recibida para nodo: ${payload.data.id}`);
+          addDiagnostico(payload.data.id, payload.data);
+        }
+      } catch (err) {
+        console.error("❌ [SRE] Error en la ingesta de telemetría:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.warn("⚠️ [SRE] Interrupción en el túnel de diagnóstico. Reintentando...");
+      eventSource.close();
+      // El navegador suele intentar reconectar automáticamente, pero lo vigilamos
+    };
+
+    return () => {
+      console.log("🔌 [SRE] Cerrando canal de telemetría.");
+      eventSource.close();
+    };
+  }, [addDiagnostico]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!endpoints && !error) setShowTimeout(true)

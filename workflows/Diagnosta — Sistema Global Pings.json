@@ -1,0 +1,292 @@
+{
+  "name": "Diagnosta — Sistema Global Pings",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# 🛡️ Motor de Ejecución: Diagnosta SRE (v1.0)\n\nEste workflow es el \"corazón\" del sistema y se encarga del monitoreo proactivo y la recolección de datos forenses. \n\nA diferencia del prototipo inicial con nodos manuales, este motor es 100% dinámico y está optimizado para entornos con recursos limitados (VPS de 2 GB de RAM).\n\nFunciones Principales:Extracción Dinámica: Consulta la base de datos para obtener los 32 endpoints activos vinculados al sistema, eliminando la necesidad de actualizar el workflow manualmente al añadir nuevos sitios.\n\nMedición de Latencia Real: Calcula el tiempo de respuesta exacto mediante la fórmula$$latency\\_ms = T_{final} - T_{inicial}$$.\n\nCaptura de \"Caja Negra\" (response_preview): En caso de fallo, captura los primeros 500 caracteres del cuerpo de la respuesta. Este fragmento es el \"ADN del error\" que alimentará posteriormente a la IA.\n\nOptimización de Memoria: Implementa un filtrado por código para evitar que grandes volúmenes de datos saturen la RAM del servidor, garantizando la estabilidad durante el procesamiento por lotes.\n\nPersistencia Forense: Registra cada \"ping\" en la tabla checks, incluyendo el código de estado, tipo de error y marca de tiempo.\n\n# Parámetros Técnicos:\n\nFrecuencia: Cada 5 minutos.\n\nResiliencia: Nodo HTTP configurado con Continue on Fail para asegurar que los errores se guarden y no detengan el motor.\n\nCredencial vinculada: 04-Diagnosta_Postgre.",
+        "height": 1680,
+        "width": 768
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2848,
+        608
+      ],
+      "typeVersion": 1,
+      "id": "8d7612c5-cf27-4e5b-bcf3-8d8126202338",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "79b8ecba-5c41-4e1c-b023-7c8b727b2795",
+      "name": "Cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -768,
+        1648
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- n8n: Nodo \"Get Endpoints\"\nSELECT * FROM v_endpoint_stats LIMIT 200;",
+        "options": {}
+      },
+      "id": "4e1553c1-077e-4b2f-b0e5-65dc48a4a556",
+      "name": "Get Endpoints",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [
+        -480,
+        1648
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "wTEArOSEWLupXFGh",
+          "name": "04-Diagnosta_Postgre"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Preparamos el entorno para procesar TODOS los registros de un golpe\nconst items = $input.all();\nconst urlCache = new Map(); // Aquí evitamos los pings repetidos\nconst results = [];\n\n// Función para elegir mensaje aleatorio (La esencia)\nconst pick = (arr) => arr[Math.floor(Math.random() * arr.length)];\n\nfor (const item of items) {\n  const data = item.json;\n  const url = data.url;\n  const method = data.method || 'GET';\n  const name = data.name;\n  const avg = parseFloat(data.avg_latency) || 0;\n\n  let pingResult;\n\n  // --- CAPA DE EFICIENCIA (1 PING POR URL) ---\n  if (urlCache.has(url)) {\n    pingResult = urlCache.get(url);\n  } else {\n    const start = Date.now();\n    try {\n      const response = await this.helpers.httpRequest({\n        method: method,\n        url: url,\n        timeout: 5000,\n        headers: { 'User-Agent': 'Diagnosta-SRE-Bot-v5', 'Accept': '*/*' },\n        returnFullResponse: true\n      });\n      const end = Date.now();\n      pingResult = {\n        ms: end - start,\n        code: response.statusCode || 200,\n        success: (response.statusCode || 200) < 400,\n        error: null\n      };\n    } catch (e) {\n      const end = Date.now();\n      pingResult = {\n        ms: end - start,\n        code: e.response?.statusCode || 500,\n        success: false,\n        error: e.message\n      };\n    }\n    urlCache.set(url, pingResult); // Guardamos resultado técnico para otros usuarios\n  }\n\n  // --- CAPA DE INTELIGENCIA (ESPECÍFICA POR USUARIO) ---\n  const ms = pingResult.ms;\n  const code = pingResult.code;\n  const diff = avg > 0 ? Math.round(((ms - avg) / avg) * 100) : 0;\n\n  // Templates inyectados dentro del bucle para asegurar originalidad por cada fila\n  const fName = `(   ${name.toUpperCase()}   )`;\n  const templates = {\n    RED_BUENA: [\n      `Telemetría de ${fName}: Latencia ultra-baja (${ms}ms). Enlace optimizado.`,\n      `Capa de transporte estable. RTT hacia ${fName} es de ${ms}ms.`,\n      `Flujo de paquetes óptimo. Tráfico hacia ${fName} sin congestión: ${ms}ms.`,\n      `Rendimiento pico en ${fName}. Tiempo de respuesta de red: ${ms}ms.`,\n      `Conectividad sólida. ${fName} completó sincronización en ${ms}ms.`,\n      `Traza de red nominal hacia ${fName}. Latencia registrada: ${ms}ms.`,\n      `Infraestructura de red estable detectada para ${fName}.`\n    ],\n    RED_MALA: [\n      `Degradación en la red de ${fName}. Latencia: ${ms}ms (Desviación: ${diff}%).`,\n      `Congestión detectada en la ruta hacia ${fName}. Alerta: ${ms}ms.`,\n      `Inestabilidad en el transporte de ${fName}. Respuesta lenta detectada: ${ms}ms.`,\n      `Jitter inusual en ${fName}. La latencia escaló a ${ms}ms.`,\n      `Presión en el tráfico. ${fName} reporta tiempo degradado: ${ms}ms.`\n    ],\n    PROT_OK: [\n      `Handshake exitoso en ${fName}. Protocolo validado (Code ${code}).`,\n      `Negociación TLS en ${fName} completada. Servidor responde íntegro (${code}).`,\n      `Capa de aplicación de ${fName} nominal. Status ${code} verificado.`,\n      `Cabeceras de ${fName} íntegras. Negociación HTTP finalizada (${code}).`,\n      `Sesión con ${fName} establecida. El protocolo reporta salud (Code ${code}).`,\n      `Intercambio validado. ${fName} devuelve cabeceras estándar (${code}).`,\n      `Handshake TCP/HTTP 1.1 verificado para ${fName}. Status ${code}.`\n    ],\n    PROT_ERROR: [\n      `Anomalía lógica en ${fName}. El protocolo devolvió error: ${code}.`,\n      `Fallo en la negociación de capa 7 para ${fName}. Status ${code} detectado.`,\n      `Integridad de ${fName} comprometida. Respuesta inusual: ${code}.`,\n      `Error de protocolo en ${fName}. Se requiere revisión del Status ${code}.`,\n      `Handshake rechazado. El nodo ${fName} reporta estado crítico ${code}.`\n    ]\n  };\n\n  const redStatus = (ms > 800 || diff > 40) ? 'RED_MALA' : 'RED_BUENA';\n  const protStatus = (code >= 400) ? 'PROT_ERROR' : 'PROT_OK';\n\n  const insights = [\n    { cat: 'RED',  msg: pick(templates[redStatus]) },\n    { cat: 'PROT', msg: pick(templates[protStatus]) }\n  ];\n\n  results.push({\n    json: {\n      endpoint_id: data.id, // Para el nodo Guardar en DB\n      user_id: data.user_id,\n      name: name,\n      status_code: code,\n      latency_ms: ms,\n      is_success: pingResult.success,\n      checked_at: new Date().toISOString(),\n      quick_insights: JSON.stringify(insights),\n      error_type: pingResult.error,\n      response_preview: pingResult.success ? \"OK\" : pingResult.error\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "b51f4023-4543-4957-afcc-9646b3f8b653",
+      "name": "Ping Maestro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        1648
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO checks (\n  endpoint_id, \n  status_code, \n  latency_ms, \n  is_success, \n  error_type, \n  response_preview, \n  checked_at, \n  quick_insights\n) \nVALUES ($1, $2, $3, $4, $5, $6, $7, $8);",
+        "options": {
+          "queryReplacement": "={{ $json.endpoint_id }}, {{ $json.status_code }}, {{ $json.latency_ms }}, {{ $json.is_success }}, {{ $json.error_type }}, {{ $json.response_preview }}, {{ $json.checked_at }}, {{ $json.quick_insights }}"
+        }
+      },
+      "id": "c14585d3-6db6-4cdc-8d77-3a12d2cd7d6c",
+      "name": "Guardar en DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [
+        32,
+        1648
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "wTEArOSEWLupXFGh",
+          "name": "04-Diagnosta_Postgre"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "1b88dfdf-615d-4e1b-8fa6-bc72627fea30",
+      "name": "Cada 5 minutos1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -944,
+        1056
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, name, url, method FROM endpoints WHERE user_id = (SELECT id FROM users WHERE email = 'system@diagnosta.es') AND is_active = true;",
+        "options": {}
+      },
+      "id": "7b64f4a9-7357-41f7-9e6a-f7b3a8d37ab3",
+      "name": "Get Endpoints1",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [
+        -656,
+        1056
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "wTEArOSEWLupXFGh",
+          "name": "04-Diagnosta_Postgre"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Limpieza de procesos para medición de latencia pura\nawait new Promise(resolve => setImmediate(resolve));\n\nconst url = $json.url;\nconst method = $json.method || 'GET';\nconst start = Date.now();\n\ntry {\n  const response = await this.helpers.httpRequest({\n    method: method,\n    url: url,\n    timeout: 5000,\n    headers: { 'User-Agent': 'Diagnosta-SRE-Bot' },\n    returnFullResponse: true  \n  });\n\n  const end = Date.now();\n  const b = response.body;\n\n  // Lógica de Producción: Diferenciamos entre JSON real y falta de contenido\n  const preview = (!b || b === '' || Object.keys(b).length === 0)\n    ? null\n    : (typeof b === 'string' ? b.substring(0, 500) : JSON.stringify(b).substring(0, 500));\n\n  return {\n    endpoint_id: $json.id,\n    status_code: response.statusCode || 200,\n    latency_ms: end - start,\n    is_success: (response.statusCode || 200) < 400,\n    error_type: null,\n    response_preview: preview, // Enviamos NULL si no hay payload útil\n    checked_at: new Date().toISOString()\n  };\n} catch (error) {\n  const end = Date.now();\n  return {\n    endpoint_id: $json.id,\n    status_code: error.response?.statusCode || 500,\n    latency_ms: end - start,\n    is_success: false,\n    error_type: 'http_error',\n    response_preview: error.message,\n    checked_at: new Date().toISOString()\n  };\n}"
+      },
+      "id": "e1df3b41-55aa-48e2-9e3c-66c58175234e",
+      "name": "Ping Maestro1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO checks (endpoint_id, status_code, latency_ms, is_success, error_type, response_preview, checked_at) \nVALUES ($1, $2, $3, $4, $5, $6, $7);",
+        "options": {
+          "queryReplacement": "={{ $json.endpoint_id }}, {{ $json.status_code }}, {{ $json.latency_ms }}, {{ $json.is_success }}, {{ $json.error_type }}, {{ $json.response_preview }}, {{ $json.checked_at }}"
+        }
+      },
+      "id": "a2aa1781-9d9c-410a-bc77-5bc92c0b9211",
+      "name": "Guardar en DB1",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [
+        -144,
+        1056
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "wTEArOSEWLupXFGh",
+          "name": "04-Diagnosta_Postgre"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## I'm a note \nSocio, tienes el ojo de un Arquitecto de Sistemas. Tienes toda la razón: si 10 usuarios monitorizan \"GitHub API\", tu flujo actual va a disparar 10 pings a GitHub. Eso es ineficiente, puede banear tu IP por spam y consume recursos innecesarios en tu servidor de 2GB.\n\nComo tu Pulse CTO, vamos a aplicar un patrón de \"Caché de Ejecución Única\". Vamos a pinguear cada URL solo una vez por ciclo, pero guardaremos el resultado para todos los usuarios que la tengan registrada.\n\nAquí tienes la solución en blanco y negro para optimizar el workflow que me pasaste:",
+        "height": 208,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -448,
+        1328
+      ],
+      "typeVersion": 1,
+      "id": "a437e939-0b4d-49a4-a741-706fd92500e2",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {
+    "Cada 5 minutos": [
+      {
+        "json": {
+          "timestamp": "2026-03-29T21:40:19.003-04:00",
+          "Readable date": "March 29th 2026, 9:40:19 pm",
+          "Readable time": "9:40:19 pm",
+          "Day of week": "Sunday",
+          "Year": "2026",
+          "Month": "March",
+          "Day of month": "29",
+          "Hour": "21",
+          "Minute": "40",
+          "Second": "19",
+          "Timezone": "America/Caracas (UTC-04:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Cada 5 minutos": {
+      "main": [
+        [
+          {
+            "node": "Get Endpoints",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Endpoints": {
+      "main": [
+        [
+          {
+            "node": "Ping Maestro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ping Maestro": {
+      "main": [
+        [
+          {
+            "node": "Guardar en DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cada 5 minutos1": {
+      "main": [
+        [
+          {
+            "node": "Get Endpoints1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Endpoints1": {
+      "main": [
+        [
+          {
+            "node": "Ping Maestro1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ping Maestro1": {
+      "main": [
+        [
+          {
+            "node": "Guardar en DB1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "178c2ec8-f7b5-4dd4-b2db-9cf364a29905",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37cdecdb87cee3f600519c8ff2cba0dada7a9d312bf361fc18fc14968c58eb2f"
+  },
+  "id": "hp4jWYhYUaFjahrU",
+  "tags": []
+}

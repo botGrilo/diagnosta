@@ -1,0 +1,106 @@
+{
+  "name": "04-CerebroDiagnosta-MAESTRO",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "diagnostico-global-maestro",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "3db75622-ac72-41c9-868f-6213f61f545a",
+      "name": "Webhook (Array Snapshot)1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        640,
+        48
+      ],
+      "webhookId": "752b6fcb-724c-4947-a990-dac2e3fd8e7f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\nconst headers = Object.keys($items(\"Webhook (Array Snapshot)1\")[0].json.headers).reduce((acc, key) => {\n    acc[key.toLowerCase()] = $items(\"Webhook (Array Snapshot)1\")[0].json.headers[key];\n    return acc;\n}, {});\n\nconst body = $json.body;\n\nconst received_sig = headers['x-diagnosta-signature'];\nconst received_ts = headers['x-diagnosta-timestamp'];\n\nif (!received_sig || !received_ts) {\n    throw new Error(\"SECURITY: Sin firma digital\");\n}\n\nconst now = Date.now();\nconst requestTime = parseInt(received_ts);\n\nif (Math.abs(now - requestTime) > 300000) {\n    throw new Error(\"SECURITY: Timestamp expirado\");\n}\n\nconst secret = $env[\"DIAGNOSTA_WEBHOOK_SECRET\"];\nconst salt = $env[\"DIAGNOSTA_SALT\"];\n\nif (!secret || !salt) {\n    throw new Error(\"SECURITY: Variables de entorno no encontradas\");\n}\n\nconst expected = crypto\n    .createHmac('sha256', secret + salt)\n    .update(received_ts)\n    .digest('hex');\n\nif (received_sig !== expected) {\n    throw new Error(\"SECURITY: Firma invalida\");\n}\n\nif (!body.snapshots || !Array.isArray(body.snapshots)) {\n    throw new Error(\"DATA: Sin snapshots en el payload\");\n}\n\nreturn body.snapshots.map(snapshot => {\n    return {\n        json: {\n            ...snapshot,\n            job_id: body.job_id,\n            trace_id: body.job_id + \"_\" + snapshot.id,\n            source: body.source,\n            _internal: {\n                verified_at: new Date().toISOString()\n            }\n        }\n    };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        48
+      ],
+      "id": "1060d474-a97e-4e0f-9e9f-fb98c39bfe95",
+      "name": "VerificarHMAC",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "YumIBNfbi1U5pNDk",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YumIBNfbi1U5pNDk",
+          "cachedResultName": "04-EspecialistaDiagnosta"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1056,
+        48
+      ],
+      "id": "54d0f491-8425-4a3b-8674-33db5d4ccdc3",
+      "name": "Call '04-EspecialistaDiagnosta'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook (Array Snapshot)1": {
+      "main": [
+        [
+          {
+            "node": "VerificarHMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VerificarHMAC": {
+      "main": [
+        [
+          {
+            "node": "Call '04-EspecialistaDiagnosta'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "39a853b4-1fd8-4bbc-bec4-fbd453f32e8a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37cdecdb87cee3f600519c8ff2cba0dada7a9d312bf361fc18fc14968c58eb2f"
+  },
+  "id": "4p4Q7UrY86IdSiGe",
+  "tags": []
+}

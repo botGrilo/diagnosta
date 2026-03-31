@@ -1,0 +1,769 @@
+{
+  "name": "04-EspecialistaDiagnosta",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "252168b7-6f12-4a70-a165-bd58085de39a",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT checked_at, latency_ms, is_success FROM checks WHERE endpoint_id = $1 ORDER BY checked_at DESC LIMIT 50;",
+        "options": {
+          "queryReplacement": "={{ $json.id }}"
+        }
+      },
+      "id": "9a6dd615-e622-4fb4-bf80-c64af6f2fa72",
+      "name": "Postgres (Historial)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "wTEArOSEWLupXFGh",
+          "name": "04-Diagnosta_Postgre"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/diagnostico-push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Diagnosta-Signature",
+              "value": "={{ $json.signature }}"
+            },
+            {
+              "name": "X-Diagnosta-Timestamp",
+              "value": "={{ $json.timestamp }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "48cebed9-6db9-49e7-a28e-829ac17fc185",
+      "name": "HTTP Request (PUSH FIFO)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        3408,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "97b5a364-4f25-4c6f-95c3-5c8479486d26",
+                    "leftValue": "={{ \n  $node[\"Execute Workflow Trigger\"].json.vital_signs.status_code == 200 && \n  $node[\"Execute Workflow Trigger\"].json.vital_signs.latency_ms < 300 && \n  $node[\"Execute Workflow Trigger\"].json.vital_signs.latency_ms <= ($node[\"DrJunior\"].json.epidemiology_report.avg_num * 2) &&\n  !($node[\"Execute Workflow Trigger\"].json.panic_mode || false)\n}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sano"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "32e5e719-5590-4c12-88d1-56f8ec41f5d2",
+                    "leftValue": "={{true}}",
+                    "rightValue": "={{ 200 }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2.5 pro"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "b1c85f8c-3892-44e1-b726-b2593fca8d98",
+      "name": "TriajeDeGravedad"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt_input }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "={{ $json.system_instruction }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        -832
+      ],
+      "id": "59147a7e-fb80-427b-8917-5b132f1a13bf",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "PeS3GTM8xbLb4Zfe",
+          "name": "DiagnostaGEMINI"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * FORMATEADOR UNIFICADO V4 - Específico para el mapa de Diagnosta\n * Soporta: Gemini Flash, Gemini Pro, Groq, ProtocoloAuxilio y RespuestaSano.\n */\n\nconst input = $json;\nconst trigger = $(\"Execute Workflow Trigger\").item.json;\n// const forense = $(\"ProcesadorForenseUniversal\").item.json;\nconst forense = $('DrJunior').item.json;\n\nlet finalRecipe = null;\nlet provider = \"SRE_SYSTEM\";\n\n// --- 1. DETECCIÓN DE FUENTE ---\n\n// CASO A: Cualquier fallback local\nif (input._meta?.fuente || input.ai_provider === \"FALLBACK_SRE_LOCAL\" || input.ai_provider === \"SISTEMA_LOCAL_SANO\") {\n    finalRecipe = input.ai_recipe || input;\n    provider = input.ai_provider || \"LOCAL_SRE_FALLBACK\";\n}\n\n// CASO B: Gemini Nativo de n8n (Message a model / Message a model1)\n// Estructura: content.parts[0].text\nelse if (input.content?.parts?.[0]?.text) {\n    const raw = input.content.parts[0].text;\n    try {\n        finalRecipe = JSON.parse(raw);\n    } catch(e) {\n        // Limpiamos los backticks de markdown (```json ... ```)\n        const clean = raw.replace(/```json|```/g, '').trim();\n        finalRecipe = JSON.parse(clean);\n    }\n    // Diferenciamos si vino del nodo 1 (Flash) o del nodo 2 (Pro) si es posible,\n    // o lo marcamos como Gemini General.\n    provider = \"Gemini_AI_n8n\";\n}\n\n// CASO C: Groq (HTTP Request)\n// Estructura: choices[0].message.content\nelse if (input.choices?.[0]?.message?.content) {\n    const raw = input.choices[0].message.content;\n    try {\n        finalRecipe = JSON.parse(raw);\n    } catch(e) {\n        const clean = raw.replace(/```json|```/g, '').trim();\n        finalRecipe = JSON.parse(clean);\n    }\n    provider = \"Groq_Llama3\";\n}\n\n// CASO D: Respuesta Sano (Nodo estático)\n// Identificado porque ya tiene la estructura ai_recipe\nelse if (input.ai_recipe) {\n    finalRecipe = input.ai_recipe;\n    provider = input.ai_provider || \"SRE_LOCAL_STATIC\";\n}\n\n// CASO E: ERROR CRÍTICO / DESCONOCIDO\nelse {\n    finalRecipe = {\n        resumen_clinico: {\n            gravedad: \"ROJO\",\n            titulo_diagnostico: \"Error de Mapeo Forense\",\n            descripcion_humana: \"El sistema recibió una respuesta pero no pudo extraer el diagnóstico de la estructura recibida.\",\n            requiere_humano: true\n        }\n    };\n    provider = \"MAPPING_ERROR\";\n}\n\n// --- 2. ENSAMBLAJE FINAL ---\n// Devolvemos el objeto exacto que el Frontend y el resto del sistema esperan\nreturn {\n    id: trigger.id,\n    trace_id: trigger.trace_id,\n    ai_recipe: finalRecipe,\n    epidemiology_report: forense.epidemiology_report,\n    ai_provider: provider,\n    _internal: {\n        timestamp: new Date().toISOString(),\n        execution_id: $executionId,\n        raw_status: trigger.vital_signs?.status_code\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        -176
+      ],
+      "id": "53cc697d-b9dc-470d-b302-3c6bac10a3b7",
+      "name": "FormatearRecipe"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + ($env[\"GROQ_API_KEY\"] || 'sk_test_placeholder') }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": {{ JSON.stringify($json.system_instruction) }}\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt_input) }}\n    }\n  ],\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -144,
+        -592
+      ],
+      "id": "35e5bb30-1dd4-4d70-a4cc-32a3ddccb9d6",
+      "name": "GroqHTTP_Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\n// 🛡️ Extraemos las llaves directamente del entorno del contenedor Docker\nconst secret = $env[\"DIAGNOSTA_WEBHOOK_SECRET\"]; \nconst salt = $env[\"DIAGNOSTA_SALT\"];\nconst timestamp = Date.now().toString();\n\n// Verificación de seguridad en el \"Cerebro\"\nif (!secret || !salt) {\n  throw new Error(\"SRE CRITICAL: No se encontraron las llaves en el entorno de n8n. Revisa el Docker-Compose.\");\n}\n\n// 🔐 Generamos la firma HMAC SHA-256\n// Esta firma solo es válida por 60 segundos en el frontend\nconst signature = crypto\n  .createHmac('sha256', secret + salt)\n  .update(timestamp)\n  .digest('hex');\n\nreturn { \n  signature, \n  timestamp \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        -192
+      ],
+      "id": "8c70f22d-651c-4bc5-a0a6-662efb44e66c",
+      "name": "Generar Firma HMAC"
+    },
+    {
+      "parameters": {
+        "jsCode": "await new Promise(resolve => setImmediate(resolve));\n\nconst history = $items(\"Postgres (Historial)\");\nconst trigger = $node[\"Execute Workflow Trigger\"].json;\n\n//const endpoint_name = trigger.name || \"Endpoint Desconocido\";\nconst endpoint_name = trigger.name || \"API_Bajo_Analisis\";\nconst status = trigger.vital_signs.status_code;\nconst latency_ms = trigger.vital_signs.latency_ms;\nconst response_evidence = trigger.vital_signs.response_preview || null;\nconst panic_mode = trigger.panic_mode === true;\nconst source = trigger.source || \"AUTO_SENSOR\";\n\n// ── CLASIFICACIÓN ────────────────────────────────────────────────\nlet health_category = \"UCI\";\nif (latency_ms < 300) health_category = \"ATLETA\";\nelse if (latency_ms < 600) health_category = \"NORMAL\";\nelse if (latency_ms < 1200) health_category = \"FATIGADO\";\n\nconst gravedad = (status >= 500 || panic_mode) ? \"ROJO\"\n    : health_category === \"UCI\" ? \"ROJO\"\n    : health_category === \"FATIGADO\" ? \"AMARILLO\"\n    : \"VERDE\";\n\nconst requiere_humano = status >= 500 || latency_ms > 1200 || panic_mode;\n\n// ── HISTORIAL BÁSICO ─────────────────────────────────────────────\nconst totalChecks = history.length;\nconst allLatencies = history.map(h => h.json.latency_ms).filter(l => l > 0);\nconst allSuccess = history.filter(h => h.json.is_success === true).length;\n\nconst avg_num = allLatencies.length\n    ? Math.round(allLatencies.reduce((a,b) => a+b, 0) / allLatencies.length)\n    : latency_ms;\nconst avgLatency = totalChecks <= 1 ? \"N/A\" : `${avg_num}ms`;\nconst uptimePercent = totalChecks <= 1\n    ? \"100% (Calibración Inicial)\"\n    : `${((allSuccess / totalChecks) * 100).toFixed(2)}%`;\n\n// ── TENDENCIA BÁSICA (últimos 5 vs promedio) ─────────────────────\nconst lastFive = allLatencies.slice(0, 5);\nconst recentAvg = lastFive.length\n    ? lastFive.reduce((a,b) => a+b, 0) / lastFive.length\n    : latency_ms;\nconst trend = recentAvg > avg_num * 1.3 ? \"DEGRADANDO\"\n    : recentAvg < avg_num * 0.7 ? \"MEJORANDO\"\n    : \"ESTABLE\";\n\n// ── FALLOS RECIENTES ─────────────────────────────────────────────\nconst fallosRecientes = history.slice(0, 5)\n    .filter(h => !h.json.is_success).length;\nconst contexto_historico = fallosRecientes > 0\n    ? `PATRÓN CRÓNICO: ${fallosRecientes}/5 checks recientes fallaron.`\n    : status >= 500\n    ? `FALLO AGUDO: historial limpio, este error es puntual.`\n    : `Historial limpio — rendimiento consistente.`;\n\n// ── EVIDENCIA ────────────────────────────────────────────────────\nconst evidence_type = response_evidence\n    ? \"PAYLOAD_REAL — respuesta JSON verificada\"\n    : \"SOLO_CONECTIVIDAD — respuesta HTML/Redirección\";\n\n// ── ALERTAS ──────────────────────────────────────────────────────\nconst status_alert = status >= 500\n    ? `\\nALERTA CRÍTICA — STATUS ${status}: Fallo estructural. GRAVEDAD = ROJO independientemente de latencia.`\n    : status >= 400\n    ? `\\nADVERTENCIA — STATUS ${status}: Petición rechazada. Investigar autenticación o parámetros.`\n    : panic_mode\n    ? `\\nMODO PÁNICO ACTIVADO: Tratar como ROJO independientemente de métricas.`\n    : \"\";\n\n// ── CONTEXTO USER_TRIGGERED ──────────────────────────────────────\nconst context_note = source === \"USER_TRIGGERED\"\n    ? `\\nCONTEXTO: El usuario está viendo ${latency_ms}ms en su dashboard. Compara con promedio histórico (${avgLatency}) y explica si es normal o preocupante para ${endpoint_name}.`\n    : \"\";\n\n// ── PROMPT BASE (el Dr. Junior lo enriquecerá) ───────────────────\nconst prompt_base = `FICHA CLÍNICA — ${endpoint_name}\n\nSIGNOS VITALES ACTUALES:\n- Latencia: ${latency_ms}ms (${health_category})\n- Status HTTP: ${status}\n- Evidencia: ${evidence_type}\n- Gravedad calculada: ${gravedad}\n- Uptime: ${uptimePercent}\n- Tendencia básica: ${trend}\n- Fallos recientes: ${fallosRecientes}/5\n- Contexto: ${contexto_historico}\n${status_alert}\n${context_note}`;\n\nconst system_instruction = `Eres el Dr. Grilo — Hybrid Forensic Surgeon SRE. Diagnosticas APIs para CEO y Senior Developers.\n\nMETODOLOGÍA:\n- Cero real HTTPS: ~300ms. ATLETA <300ms · NORMAL <600ms · FATIGADO <1200ms · UCI >1200ms.\n- STATUS HTTP manda: un 500 con 50ms ES crítico. La latencia baja no lo mitiga.\n- Usa ${endpoint_name} por su nombre real, nunca \"endpoint\" o \"API\".\n- NARRATIVA DUAL: metáfora médica breve + causa técnica cruda.\n- Sin saludos. Directo: \"${endpoint_name} responde en Xms, Y% sobre su promedio de Zms.\"\n\nSALIDA JSON ESTRICTO — sin markdown:\n{\n  \"resumen_clinico\": { \"gravedad\": \"${gravedad}\", \"titulo_diagnostico\": \"...\", \"descripcion_humana\": \"...\", \"requiere_humano\": ${requiere_humano} },\n  \"analisis_tecnico\": { \"causa_raiz_probable\": \"...\", \"causa_diferencial\": \"...\", \"destinatario\": \"...\", \"patron_historico\": \"AGUDO|CRONICO|INTERMITENTE\", \"tendencia\": \"${trend}\" },\n  \"protocolo_intervencion\": [{ \"paso\": 1, \"tipo\": \"...\", \"accion\": \"...\", \"comando\": \"...\" }],\n  \"pronostico\": { \"tiempo_recuperacion\": \"...\", \"impacto_negocio\": \"...\" },\n  \"firma\": \"Dr. Grilo - ${new Date().toISOString()}\"\n}`;\n\nreturn {\n    id: trigger.id,\n    trace_id: trigger.trace_id,\n    system_instruction: system_instruction,\n    prompt_base: prompt_base,\n    epidemiology_report: {\n        uptime_score: uptimePercent,\n        avg_latency: avgLatency,\n        avg_num: avg_num,\n        health_category: health_category,\n        gravedad: gravedad,\n        trend: trend,\n        evidence_type: evidence_type,\n        evidence_captured: !!response_evidence,\n        fallos_recientes: fallosRecientes,\n        panic_mode: panic_mode,\n        trend_status: status >= 500 ? \"CRITICAL\" : status >= 400 ? \"WARNING\" : \"STABLE\",\n        captured_at: new Date().toISOString(),\n        recent_history: history.slice(0, 10).map(h => h.json),\n        raw_history: history.map(h => h.json)\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "cd1c2373-720c-49c7-8324-7e183d293901",
+      "name": "ProcesadorForenseUniversal",
+      "notes": "ProcesadorForenseUniversal (ya existe)\n→ Responsabilidad: CLASIFICAR y CONTEXTUALIZAR\n  • health_category por latencia\n  • gravedad con fuerza por status HTTP\n  • evidence_type\n  • status_alert\n  • context_note para USER_TRIGGERED\n  • fallos recientes básicos\n  • construir prompt_input y system_instruction para Gemini\n  • recent_history (los 10 últimos)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const procesador = $('ProcesadorForenseUniversal').item.json;\nconst junior = $('DrJunior').item.json;\nconst trigger = $('Execute Workflow Trigger').item.json;\nconst epi = junior.epidemiology_report;\nconst jr = epi.analisis_junior;\nconst allLatencies = (epi.raw_history || []).map(h => h.latency_ms).filter(l => l > 0);\nconst latency_ms = trigger.vital_signs?.latency_ms || 0;\nconst endpoint_name = jr.endpoint_name || trigger.name || \"Endpoint\";\nconst avg_calc = jr.avg_calculado || latency_ms;\nconst min_lat = jr.min_latency || latency_ms;\nconst max_lat = jr.max_latency || latency_ms;\nconst std_dev = jr.std_dev || 0;\nconst percentil = jr.percentil || 50;\nconst percentil_label = jr.percentil_label || \"\";\nconst tendencia_real = jr.tendencia_real || \"ESTABLE\";\nconst estabilidad = jr.estabilidad || \"ESTABLE\";\nconst pct_vs_avg = jr.pct_vs_avg || 0;\nconst velocidad = jr.velocidad_cambio_ms || 0;\nconst comparacion_2h = jr.comparacion_2h || \"\";\nconst patron_horario = jr.patron_horario || \"\";\nconst racha = jr.racha_sobre_umbral || 0;\n\nfunction rand(arr) {\n    return arr[Math.floor(Math.random() * arr.length)];\n}\n\nconst titulos = [\n    `${endpoint_name}: Ritmo Sinusal Óptimo`,\n    `${endpoint_name}: Constantes Vitales de Élite`,\n    `${endpoint_name}: Latencia Sub-Umbral Confirmada`,\n    `${endpoint_name}: Conexión en Estado Atleta`,\n    `${endpoint_name}: Rendimiento de Alto Rendimiento`\n];\n\nconst descripciones = [\n    `${endpoint_name} responde en ${latency_ms}ms — dentro del rango ATLETA (<300ms). ${pct_vs_avg > 50 ? `Aunque está ${pct_vs_avg}% sobre su promedio histórico de ${avg_calc}ms, sigue en zona óptima.` : `${Math.abs(pct_vs_avg)}% ${pct_vs_avg <= 0 ? 'bajo' : 'sobre'} su promedio de ${avg_calc}ms.`} Ciclo TCP+TLS completado correctamente.`,\n    `Conexión óptima. ${latency_ms}ms se sitúa en el percentil ${percentil}% del historial — ${percentil_label}. Rango observado: ${min_lat}ms–${max_lat}ms. ${pct_vs_avg > 50 ? `Promedio histórico excepcionalmente bajo (${avg_calc}ms) para este endpoint.` : ''}`,\n    `${endpoint_name} opera con ${estabilidad === 'MUY ESTABLE' ? 'muy alta estabilidad' : estabilidad === 'ESTABLE' ? 'estabilidad sólida' : estabilidad === 'VARIABLE' ? 'variabilidad moderada' : 'alta variabilidad'}. Desviación de ${std_dev}ms sobre promedio ${avg_calc}ms. ${latency_ms}ms por debajo del umbral físico HTTPS de 300ms.`,\n    `Latencia ${latency_ms}ms: ${Math.abs(avg_calc - latency_ms)}ms ${latency_ms < avg_calc ? 'mejor que' : 'sobre'} el promedio histórico de ${avg_calc}ms. ${tendencia_real === 'MEJORANDO' ? `Tendencia positiva — mejora de ${velocidad}ms respecto a mediciones anteriores.` : 'Tendencia estable y saludable.'}`,\n    `Ciclo completo TCP+TLS+Servidor en ${latency_ms}ms. Historial: mínimo ${min_lat}ms, máximo ${max_lat}ms. ${comparacion_2h}`\n];\n\nconst causas = [\n    `Salud operativa nominal. Promedio histórico ${avg_calc}ms con desviación de ${std_dev}ms — ${estabilidad.toLowerCase()}.`,\n    `Infraestructura respondiendo en parámetros ideales. Percentil ${percentil}% del historial reciente.`,\n    `Sin eventos de degradación detectados. ${estabilidad} en mediciones recientes — dispersión de ${max_lat - min_lat}ms.`,\n    `Rendimiento consistente. Rango ${min_lat}ms–${max_lat}ms sin excursiones anómalas. ${patron_horario}`,\n    `Latencia ${latency_ms}ms dentro del rango óptimo. ${tendencia_real === 'MEJORANDO' ? `Mejora activa de ${velocidad}ms respecto a mediciones previas.` : 'Sin señales de deterioro en el historial.'}`\n];\n\n\nconst causas_diferenciales = [\n    `Diagnóstico preventivo: ${endpoint_name} mantiene ${epi.uptime_score} de uptime con dispersión de ${std_dev}ms — sin anomalías que requieran análisis profundo.`,\n    `Análisis estadístico confirmado: percentil ${percentil}% dentro del rango ${estabilidad.toLowerCase()}. Umbral ATLETA no superado en ${allLatencies.length} mediciones.`,\n    `Rendimiento dentro de parámetros esperados para ${endpoint_name}. Rango histórico ${min_lat}ms–${max_lat}ms confirma consistencia sin necesidad de intervención.`,\n    `${endpoint_name} opera en zona verde. ${racha > 0 ? `Solo ${racha} check(s) rozaron el umbral — sin patrón de riesgo.` : 'Cero excursiones sobre umbral en el historial reciente.'}`\n];\n\nconst protocolos = [\n    [{ paso: 1, tipo: \"MONITOREO\", accion: `Mantener vigilancia automática de ${endpoint_name} cada 5 minutos`, comando: \"N/A — sin intervención necesaria\" }],\n    [\n        { paso: 1, tipo: \"MONITOREO\", accion: `Continuar ronda médica automática`, comando: \"N/A — Dr. Grilo en modo de vigilancia pasiva\" },\n        { paso: 2, tipo: \"ALERTA\", accion: `Activar alerta si latencia supera 300ms en 3 ciclos consecutivos`, comando: \"N/A — configurar umbral en dashboard Diagnosta\" }\n    ],\n    [\n        { paso: 1, tipo: \"MONITOREO\", accion: `${endpoint_name} no requiere intervención`, comando: `curl -o /dev/null -s -w \"%{time_total}\" ${trigger.url || 'https://endpoint'}` }\n    ],\n    [\n        { paso: 1, tipo: \"MONITOREO\", accion: `Vigilancia pasiva activa — próxima ronda médica en 5 minutos`, comando: \"N/A\" },\n        { paso: 2, tipo: \"REFERENCIA\", accion: `Latencia de referencia establecida: ${latency_ms}ms (${Math.abs(pct_vs_avg)}% ${pct_vs_avg <= 0 ? 'bajo' : 'sobre'} promedio)`, comando: \"N/A — almacenado en historial clínico\" }\n    ]\n];\n\nconst pronósticos = [\n    { tiempo_recuperacion: \"N/A — sin incidencia activa\", impacto_negocio: \"Ninguno — servicio completamente operativo\" },\n    { tiempo_recuperacion: \"Sin intervención necesaria\", impacto_negocio: `Mínimo — latencia ${latency_ms}ms dentro del rango óptimo` },\n    { tiempo_recuperacion: \"N/A — estado atleta confirmado\", impacto_negocio: `Ninguno — ${epi.uptime_score} de uptime, percentil ${percentil}% del historial` },\n    { tiempo_recuperacion: \"Sin acción requerida\", impacto_negocio: `Ninguno — ${estabilidad.toLowerCase()} con dispersión de ${std_dev}ms` }\n];\n\nreturn {\n    id: junior.id,\n    trace_id: junior.trace_id,\n    ai_recipe: {\n        resumen_clinico: {\n            gravedad: \"VERDE\",\n            titulo_diagnostico: rand(titulos),\n            descripcion_humana: rand(descripciones),\n            requiere_humano: false\n        },\n        analisis_tecnico: {\n            causa_raiz_probable: rand(causas),\n            causa_diferencial: rand(causas_diferenciales),\n            destinatario: \"AUTOMATICO\",\n            patron_historico: tendencia_real === \"DEGRADANDO\" ? \"INTERMITENTE\" : \"ESTABLE\",\n            tendencia: tendencia_real\n        },\n        protocolo_intervencion: rand(protocolos),\n        pronostico: rand(pronósticos),\n        firma: `Dr. Grilo · Protocolo Local - ${new Date().toISOString()}`\n    },\n    epidemiology_report: epi,\n    ai_provider: \"Dr. Grilo · Protocolo Local\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        160
+      ],
+      "id": "6ae76feb-d4ca-49d4-96af-6521d9066c70",
+      "name": "RespuestaSano"
+    },
+    {
+      "parameters": {
+        "jsCode": "const junior = $('DrJunior').item.json;\nconst trigger = $('Execute Workflow Trigger').item.json;\nconst epi = junior.epidemiology_report;\nconst jr = epi.analisis_junior;\n\nconst status = trigger.vital_signs?.status_code || 200;\nconst latency_ms = trigger.vital_signs?.latency_ms || 0;\nconst health = epi.health_category || \"NORMAL\";\nconst endpoint_name = jr.endpoint_name || trigger.name || \"Endpoint\";\nconst avg_calc = jr.avg_calculado || latency_ms;\nconst min_lat = jr.min_latency || latency_ms;\nconst max_lat = jr.max_latency || latency_ms;\nconst std_dev = jr.std_dev || 0;\nconst percentil = jr.percentil || 50;\nconst percentil_label = jr.percentil_label || \"\";\nconst tendencia_real = jr.tendencia_real || epi.trend || \"ESTABLE\";\nconst estabilidad = jr.estabilidad || \"ESTABLE\";\nconst pct_vs_avg = jr.pct_vs_avg || 0;\nconst velocidad = jr.velocidad_cambio_ms || 0;\nconst racha = jr.racha_sobre_umbral || 0;\nconst comparacion = jr.comparacion || \"\";\nconst comparacion_2h = jr.comparacion_2h || \"\";\nconst patron_horario = jr.patron_horario || \"\";\nconst fallos = epi.fallos_recientes || 0;\n\nconst gravedad = status >= 500 ? \"ROJO\"\n    : status >= 400 ? \"AMARILLO\"\n    : health === \"UCI\" ? \"ROJO\"\n    : health === \"FATIGADO\" ? \"AMARILLO\"\n    : \"VERDE\";\n\nconst requiere_humano = status >= 500 || health === \"UCI\";\n// Categoría efectiva — prioriza status HTTP sobre latencia\n\n\nfunction rand(arr) {\n    return arr[Math.floor(Math.random() * arr.length)];\n}\n\n// ── TÍTULOS VARIADOS POR ESTADO ──────────────────────────────────\nconst titulos = {\n    ATLETA: [\n        `${endpoint_name}: Ritmo Sinusal Óptimo`,\n        `${endpoint_name}: Constantes Vitales de Élite`,\n        `${endpoint_name}: Latencia Sub-Umbral Confirmada`,\n        `${endpoint_name}: Conexión en Estado Atleta`\n    ],\n    NORMAL: [\n        `${endpoint_name}: Signos Vitales Normales`,\n        `${endpoint_name}: Operación Estándar Sin Anomalías`,\n        `${endpoint_name}: Tráfico Dentro de Parámetros`,\n        `${endpoint_name}: Estado Operativo Confirmado`\n    ],\n    FATIGADO: [\n        `${endpoint_name}: Fatiga de Red Detectada`,\n        `${endpoint_name}: Degradación en Ruta Activa`,\n        `${endpoint_name}: Congestión de Infraestructura`,\n        `${endpoint_name}: Latencia Elevada — Vigilancia Recomendada`\n    ],\n    UCI: [\n        `${endpoint_name}: Estado Crítico — Intervención Requerida`,\n        `${endpoint_name}: Fallo Estructural HTTP ${status}`,\n        `${endpoint_name}: Latencia UCI — Alerta Máxima`,\n        `${endpoint_name}: Infraestructura Comprometida`\n    ]\n};\n\n// ── DESCRIPCIONES VARIADAS POR ESTADO ───────────────────────────\nconst descripciones = {\n    ATLETA: [\n        `${endpoint_name} responde en ${latency_ms}ms — ${Math.abs(pct_vs_avg)}% ${pct_vs_avg <= 0 ? 'bajo' : 'sobre'} su promedio histórico de ${avg_calc}ms. Ciclo TCP+TLS completado en tiempo récord.`,\n        `Conexión óptima. ${latency_ms}ms en percentil ${percentil}% del historial — ${percentil_label}. Rango observado: ${min_lat}ms–${max_lat}ms.`,\n        `${endpoint_name} opera con ${estabilidad.toLowerCase()}. Desviación de ${std_dev}ms sobre promedio ${avg_calc}ms. Por debajo del umbral físico HTTPS de 300ms.`,\n        `Latencia ${latency_ms}ms: ${Math.abs(avg_calc - latency_ms)}ms ${latency_ms < avg_calc ? 'mejor que' : 'sobre'} el promedio histórico. ${tendencia_real === 'MEJORANDO' ? `Tendencia positiva — mejora de ${velocidad}ms respecto a mediciones anteriores.` : 'Tendencia estable y saludable.'}`\n    ],\n    NORMAL: [\n        `${endpoint_name} responde en ${latency_ms}ms — ${Math.abs(pct_vs_avg)}% ${pct_vs_avg <= 0 ? 'bajo' : 'sobre'} su promedio de ${avg_calc}ms. ${estabilidad} con dispersión de ${max_lat - min_lat}ms.`,\n        `Operación estándar. Rango histórico ${min_lat}ms–${max_lat}ms, valor actual en percentil ${percentil}%. ${fallos === 0 ? 'Sin fallos recientes.' : `${fallos} fallos en últimos 5 checks.`}`,\n        `${endpoint_name} muestra ${estabilidad.toLowerCase()} en mediciones recientes. ${racha > 0 ? `${racha} checks consecutivos sobre umbral — vigilar.` : 'Sin rachas de degradación detectadas.'} ${comparacion_2h}`,\n        `Latencia ${latency_ms}ms dentro del rango operativo. ${tendencia_real === 'DEGRADANDO' ? `Atención: tendencia negativa activa de +${velocidad}ms.` : 'Sin señales de deterioro.'} ${patron_horario}`\n    ],\n    FATIGADO: [\n        `${endpoint_name} responde en ${latency_ms}ms — ${pct_vs_avg}% sobre su promedio histórico de ${avg_calc}ms. ${racha > 0 ? `${racha} checks consecutivos en zona de fatiga.` : 'Episodio puntual detectado.'}`,\n        `Degradación confirmada. Rango reciente ${min_lat}ms–${max_lat}ms con valor actual en percentil ${percentil}%. ${tendencia_real === 'DEGRADANDO' ? 'La tendencia es negativa y activa.' : 'Sin tendencia negativa confirmada aún.'}`,\n        `${endpoint_name} muestra ${estabilidad.toLowerCase()} con dispersión de ${max_lat - min_lat}ms. Valor actual supera en ${pct_vs_avg}% el promedio histórico de ${avg_calc}ms. ${comparacion_2h}`,\n        `Fatiga de infraestructura. Degradación del ${Math.round(((latency_ms - min_lat) / min_lat) * 100)}% respecto al mínimo histórico de ${min_lat}ms. ${fallos > 0 ? `${fallos} fallos recientes agravan el diagnóstico.` : 'Sin fallos de conectividad aún.'}`\n    ],\n    UCI: [\n        `${endpoint_name} en estado crítico. ${status >= 500 ? `Error HTTP ${status} — fallo estructural del servidor independiente de la latencia.` : `Latencia ${latency_ms}ms supera ${Math.round(latency_ms / avg_calc)}x el promedio histórico de ${avg_calc}ms.`}`,\n        `Alerta máxima. ${fallos > 0 ? `${fallos}/5 checks recientes fallidos — patrón crónico.` : `Pico aislado de ${latency_ms}ms desde mínimo histórico de ${min_lat}ms.`} Intervención inmediata recomendada.`,\n        `${tendencia_real === 'DEGRADANDO' ? `Escalada activa: de ${min_lat}ms a ${latency_ms}ms. La degradación es progresiva.` : `Fallo abrupto: historial previo limpio hasta ahora.`} Uptime: ${epi.uptime_score}.`,\n        `Infraestructura comprometida. Valor actual en percentil ${percentil}% del historial. ${requiere_humano ? 'Requiere intervención humana inmediata.' : 'Monitoreo intensivo activado.'} ${patron_horario}`\n    ]\n};\n\n// ── CAUSAS VARIADAS ──────────────────────────────────────────────\nconst causas = {\n    ATLETA: [\n        `Salud operativa nominal. Promedio ${avg_calc}ms con desviación de ${std_dev}ms — ${estabilidad.toLowerCase()}.`,\n        `Infraestructura respondiendo en parámetros ideales. Percentil ${percentil}% del historial reciente.`,\n        `Sin eventos de degradación. Dispersión de ${max_lat - min_lat}ms entre pico y mínimo dentro de lo normal.`,\n        `Rendimiento consistente. ${tendencia_real === 'MEJORANDO' ? `Mejora activa de ${velocidad}ms respecto a mediciones previas.` : 'Sin señales de deterioro en el historial.'}`\n    ],\n    NORMAL: [\n        `Tráfico estándar con latencia aceptable. Variación de ${max_lat - min_lat}ms es ${estabilidad.toLowerCase()}.`,\n        `${tendencia_real === 'DEGRADANDO' ? `Inicio de tendencia negativa — diferencia de ${velocidad}ms entre mediciones recientes y antiguas.` : 'Operación dentro de parámetros normales de producción.'}`,\n        `Promedio histórico ${avg_calc}ms estable. ${racha > 0 ? `${racha} checks sobre umbral sugieren vigilancia preventiva.` : 'Ningún patrón de riesgo detectado.'}`,\n        `Latencia ${pct_vs_avg > 0 ? pct_vs_avg + '% sobre' : Math.abs(pct_vs_avg) + '% bajo'} el promedio. ${comparacion_2h}`\n    ],\n    FATIGADO: [\n        `Congestión de red o servidor bajo carga. Latencia ${pct_vs_avg}% sobre promedio histórico de ${avg_calc}ms.`,\n        `${tendencia_real === 'DEGRADANDO' ? `Tendencia negativa activa — el servicio lleva varios ciclos deteriorándose a razón de ${velocidad}ms.` : 'Episodio puntual de congestión sin tendencia negativa confirmada.'}`,\n        `Dispersión de ${max_lat - min_lat}ms entre pico y mínimo indica ${estabilidad.toLowerCase()}. ${fallos > 0 ? `${fallos} fallos recientes agravan el panorama.` : 'Sin fallos de conectividad.'}`,\n        `${racha > 0 ? `${racha} checks consecutivos en zona de fatiga — posible saturación progresiva.` : 'Latencia elevada sin racha activa — monitorear próximos 2-3 ciclos.'} ${patron_horario}`\n    ],\n    UCI: [\n        status >= 500\n            ? `Error HTTP ${status} — fallo estructural en el servidor. La latencia baja no mitiga un 5xx.`\n            : `Latencia crítica ${latency_ms}ms: ${Math.round(latency_ms / avg_calc)}x el promedio histórico de ${avg_calc}ms.`,\n        `${fallos > 0 ? `${fallos} fallos en últimos 5 checks confirman inestabilidad crónica.` : 'Fallo agudo — historial previo limpio. Evento puntual pero severo.'}`,\n        `Degradación del ${Math.round(((latency_ms - avg_calc) / avg_calc) * 100)}% respecto al promedio. Rango histórico ${min_lat}ms–${max_lat}ms vs actual ${latency_ms}ms.`,\n        `Infraestructura bajo estrés severo. ${tendencia_real === 'DEGRADANDO' ? 'La escalada es progresiva y activa.' : 'Fallo abrupto sin señales previas de deterioro.'}`\n    ]\n};\n\n// ── CAUSA DIFERENCIAL VARIADA ────────────────────────────────────\nconst causas_diferenciales = [\n    `Motor de análisis IA temporalmente no disponible — diagnóstico generado con lógica determinista basada en ${epi.recent_history?.length || 10} mediciones reales.`,\n    `Análisis generado por protocolo de respaldo Dr. Grilo. Gemini retomará el análisis en el próximo ciclo disponible.`,\n    `Diagnóstico determinista activado. Resultados basados en análisis estadístico verificado: percentil ${percentil}%, desviación ${std_dev}ms.`,\n    `Protocolo de contingencia activo. Motor Gemini no respondió en este ciclo — diagnóstico calculado con métricas reales de base de datos.`\n];\n\n// ── PROTOCOLOS VARIADOS POR ESTADO ──────────────────────────────\nconst protocolos = {\n    ATLETA: [\n        [{ paso: 1, tipo: \"MONITOREO\", accion: `Mantener vigilancia automática de ${endpoint_name}`, comando: \"N/A — sin intervención necesaria\" }],\n        [\n            { paso: 1, tipo: \"MONITOREO\", accion: `Continuar ronda médica cada 5 minutos`, comando: \"N/A — Dr. Grilo en modo vigilancia pasiva\" },\n            { paso: 2, tipo: \"REFERENCIA\", accion: `Latencia base establecida: ${latency_ms}ms (percentil ${percentil}%)`, comando: \"N/A — almacenado en historial clínico\" }\n        ]\n    ],\n    NORMAL: [\n        [\n            { paso: 1, tipo: \"MONITOREO\", accion: `Mantener vigilancia estándar cada 5 minutos`, comando: `curl.exe -o /dev/null -s -w \"%{time_total}\" ${trigger.url || 'https://endpoint'}` },\n            { paso: 2, tipo: \"ALERTA\", accion: `Activar alerta si latencia supera 600ms en 3 ciclos consecutivos`, comando: \"N/A — configurar umbral en dashboard Diagnosta\" }\n        ],\n        [\n            { paso: 1, tipo: \"VERIFICACION\", accion: `Confirmar latencia directa de ${endpoint_name}`, comando: `curl.exe -w \"\\\\nTiempo: %{time_total}s\\\\n\" -o /dev/null -s ${trigger.url || 'https://endpoint'}` },\n            { paso: 2, tipo: \"MOTOR_IA\", accion: `Verificar disponibilidad del Dr. Grilo para análisis profundo`, comando: \"Revisar cuota en console.cloud.google.com → APIs → Gemini\" }\n        ]\n    ],\n    FATIGADO: [\n        [\n            { paso: 1, tipo: \"MEDICION\", accion: `Medir latencia directa para descartar problema de red local`, comando: `curl.exe -w \"\\\\nTiempo: %{time_total}s\\\\n\" -o /dev/null -s -I ${trigger.url || 'https://endpoint'}` },\n            { paso: 2, tipo: \"ANALISIS\", accion: `Revisar logs del servidor en período de degradación`, comando: `tail -n 100 /var/log/nginx/access.log | grep -E '5[0-9]{2}|4[0-9]{2}'` },\n            { paso: 3, tipo: \"MOTOR_IA\", accion: `Activar Dr. Grilo para análisis profundo de degradación`, comando: \"Verificar cuota Gemini en console.cloud.google.com → APIs → Gemini\" }\n        ],\n        [\n            { paso: 1, tipo: \"VERIFICACION\", accion: `Verificar estado actual de ${endpoint_name}`, comando: `curl.exe -v ${trigger.url || 'https://endpoint'} 2>&1 | head -20` },\n            { paso: 2, tipo: \"TENDENCIA\", accion: `Monitorear próximos ${Math.ceil((max_lat - min_lat) / 50)} ciclos para confirmar patrón`, comando: \"N/A — dashboard Diagnosta activo\" },\n            { paso: 3, tipo: \"MOTOR_IA\", accion: `Reactivar Dr. Grilo cuando Gemini esté disponible`, comando: \"Revisar cuota en console.cloud.google.com → APIs → Gemini\" }\n        ]\n    ],\n    UCI: [\n        [\n            { paso: 1, tipo: \"EMERGENCIA\", accion: `Verificar estado inmediato de ${endpoint_name}`, comando: `curl.exe -v ${trigger.url || 'https://endpoint'} 2>&1 | head -20` },\n            { paso: 2, tipo: \"ESCALADO\", accion: `Notificar equipo de infraestructura`, comando: \"N/A — activar protocolo de incidente P1\" },\n            { paso: 3, tipo: \"DIAGNOSTICO\", accion: `Revisar métricas de CPU y memoria del servidor`, comando: `top -bn1 | head -20 && free -h` },\n            { paso: 4, tipo: \"MOTOR_IA\", accion: `Activar Dr. Grilo Pro UCI para análisis forense`, comando: \"Verificar cuota en console.cloud.google.com → APIs → Gemini\" }\n        ]\n    ]\n};\n\n// ── PRONÓSTICOS VARIADOS ─────────────────────────────────────────\nconst pronosticos = {\n    ATLETA: [\n        { tiempo_recuperacion: \"N/A — sin incidencia activa\", impacto_negocio: \"Ninguno — servicio completamente operativo\" },\n        { tiempo_recuperacion: \"Sin intervención necesaria\", impacto_negocio: `Mínimo — latencia ${latency_ms}ms en percentil ${percentil}% del historial` },\n        { tiempo_recuperacion: \"N/A — estado atleta confirmado\", impacto_negocio: `Ninguno — ${epi.uptime_score} uptime, ${estabilidad.toLowerCase()}` }\n    ],\n    NORMAL: [\n        { tiempo_recuperacion: \"Sin intervención necesaria\", impacto_negocio: \"Ninguno — servicio operativo dentro de parámetros\" },\n        { tiempo_recuperacion: tendencia_real === 'DEGRADANDO' ? `Monitorear próximos ${Math.ceil(velocidad / 20)} ciclos` : \"N/A — sin incidencia activa\", impacto_negocio: `Bajo — latencia ${pct_vs_avg > 0 ? pct_vs_avg + '% sobre' : 'dentro de'} promedio histórico` },\n        { tiempo_recuperacion: \"Automático — siguiente ronda médica\", impacto_negocio: `Ninguno — ${epi.uptime_score} uptime confirmado` }\n    ],\n    FATIGADO: [\n        { tiempo_recuperacion: `Monitorear próximos ${Math.ceil((max_lat - min_lat) / 50)} ciclos`, impacto_negocio: `Moderado — latencia ${pct_vs_avg}% sobre promedio histórico` },\n        { tiempo_recuperacion: tendencia_real === 'DEGRADANDO' ? \"Intervención recomendada si tendencia continúa\" : \"Probable recuperación espontánea en 1-3 ciclos\", impacto_negocio: `Moderado — ${racha > 0 ? racha + ' checks consecutivos degradados' : 'episodio puntual de congestión'}` },\n        { tiempo_recuperacion: \"2-4 ciclos de monitoreo\", impacto_negocio: `Moderado — dispersión de ${max_lat - min_lat}ms indica ${estabilidad.toLowerCase()}` }\n    ],\n    UCI: [\n        { tiempo_recuperacion: \"Requiere intervención inmediata\", impacto_negocio: \"Alto — servicio degradado o no disponible\" },\n        { tiempo_recuperacion: `Desconocido hasta resolver ${status >= 500 ? 'el error HTTP ' + status : 'la latencia crítica'}`, impacto_negocio: `Crítico — ${fallos > 0 ? fallos + ' fallos recientes confirman inestabilidad' : 'latencia ' + Math.round(latency_ms / avg_calc) + 'x el promedio histórico'}` }\n    ]\n};\n\n// ── ENSAMBLAJE FINAL ─────────────────────────────────────────────\nconst category_efectiva = (status >= 500 || status >= 400) ? \"UCI\" : health;\n\nreturn {\n    id: junior.id,\n    trace_id: junior.trace_id,\n    ai_recipe: {\n        resumen_clinico: {\n            gravedad: gravedad,\n            categoria: category_efectiva,\n            titulo_diagnostico: rand(titulos[category_efectiva] || titulos.NORMAL),\n            descripcion_humana: rand(descripciones[category_efectiva] || descripciones.NORMAL),\n            requiere_humano: requiere_humano\n        },\n        analisis_tecnico: {\n            causa_raiz_probable: rand(causas[category_efectiva] || causas.NORMAL),\n            causa_diferencial: rand(causas_diferenciales),\n            destinatario: requiere_humano ? \"DEVOPS | INFRAESTRUCTURA\" : \"AUTOMATICO\",\n            patron_historico: tendencia_real === \"DEGRADANDO\" ? \"CRONICO\"\n                : fallos > 2 ? \"RECURRENTE\"\n                : racha > 3 ? \"CRONICO\"\n                : \"INTERMITENTE\",\n            tendencia: tendencia_real\n        },\n        protocolo_intervencion: rand(protocolos[category_efectiva] || protocolos.NORMAL),\n        pronostico: rand(pronosticos[category_efectiva] || pronosticos.NORMAL),\n        firma: `Dr. Grilo · Protocolo Local - ${new Date().toISOString()}`\n    },\n    epidemiology_report: epi,\n    ai_provider: \"Dr. Grilo · Protocolo Local\",\n    _meta: {\n        fuente: \"PROTOCOLO_AUXILIO\",\n        motivo: \"Motor LLM no disponible — diagnóstico determinista con análisis histórico completo\",\n        analisis_historico: {\n            min_latency: min_lat,\n            max_latency: max_lat,\n            avg_calculado: avg_calc,\n            std_dev: std_dev,\n            percentil: percentil,\n            tendencia_real: tendencia_real,\n            estabilidad: estabilidad,\n            racha: racha,\n            fallos: fallos\n        },\n        generado_at: new Date().toISOString()\n    }\n};\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -352
+      ],
+      "id": "a015de5d-9060-40f1-bc42-0a84620e8a9b",
+      "name": "ProtocoloAuxilio"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-pro",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-pro"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt_input }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "={{ $json.system_instruction }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -144,
+        -400
+      ],
+      "id": "dd923965-525f-4dea-ac52-9b11e67c942d",
+      "name": "Message a model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "PeS3GTM8xbLb4Zfe",
+          "name": "DiagnostaGEMINI"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "# id\n\n[\n  {\n    \"id\": \"deb493c1-8e42-4c05-967e-83b7b56c666b\",\n    \"name\": \"GitHub API\"\n  },\n  {\n    \"id\": \"5f38f5ce-f2fb-4744-89c2-0a48682a1623\",\n    \"name\": \"PokeAPI\"\n  },\n  {\n    \"id\": \"8f26c136-c59d-4ab3-9a25-03ff8b46c51d\",\n    \"name\": \"Open-Meteo\"\n  },\n  {\n    \"id\": \"cf7828a9-850a-45b7-bc97-1151282b385e\",\n    \"name\": \"CoinGecko Ping\"\n  },\n  {\n    \"id\": \"d93ef767-baf5-48d5-bab4-ff475262073a\",\n    \"name\": \"Diagnosta Core\"\n  }\n]",
+        "height": 784,
+        "width": 576,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -928,
+        -1360
+      ],
+      "typeVersion": 1,
+      "id": "4bd4e731-9f7c-444b-81a9-a05167230df6",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "32e5e719-5590-4c12-88d1-56f8ec41f5d2",
+                    "leftValue": "={{ $node[\"Execute Workflow Trigger\"].json.panic_mode == true || $node[\"Execute Workflow Trigger\"].json.vital_signs.status_code >= 500 }}",
+                    "rightValue": "={{ 200 }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2.5 pro"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $node[\"Execute Workflow Trigger\"].json.vital_signs.status_code < 500 && $node[\"Execute Workflow Trigger\"].json.vital_signs.latency_ms > 300 }}",
+                    "rightValue": 200,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "10cb579f-93e5-4e81-b887-a3902c1782ef"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2.5 Flash"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "97b5a364-4f25-4c6f-95c3-5c8479486d26",
+                    "leftValue": "={{ $node[\"Execute Workflow Trigger\"].json.vital_signs.status_code == 200 && $node[\"Execute Workflow Trigger\"].json.vital_signs.latency_ms <= 300 }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sano"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        -336
+      ],
+      "id": "a66258ff-1c31-4852-91e6-d48642aa82f4",
+      "name": "TriajeDeGravedad2"
+    },
+    {
+      "parameters": {
+        "jsCode": "await new Promise(resolve => setImmediate(resolve));\n\nconst history = $items(\"Postgres (Historial)\");\nconst trigger = $node[\"Execute Workflow Trigger\"].json;\n\nconst endpoint_name = trigger.name || \"Endpoint Desconocido\";\nconst status = trigger.vital_signs.status_code;\nconst latency_ms = trigger.vital_signs.latency_ms;\nconst response_evidence = trigger.vital_signs.response_preview || null;\nconst panic_mode = trigger.panic_mode === true;\n\n// CORRECCIÓN 1: status >= 500 fuerza ROJO independientemente de latencia\nlet health_category = \"UCI\";\nif (latency_ms < 300) health_category = \"ATLETA\";\nelse if (latency_ms < 600) health_category = \"NORMAL\";\nelse if (latency_ms < 1200) health_category = \"FATIGADO\";\n\nconst gravedad = (status >= 500 || panic_mode) ? \"ROJO\"\n    : health_category === \"UCI\" ? \"ROJO\"\n    : health_category === \"FATIGADO\" ? \"AMARILLO\"\n    : \"VERDE\";\n\nconst requiere_humano = status >= 500 || latency_ms > 1200 || panic_mode;\n\n// CORRECCIÓN 2: alerta explícita que la IA no puede ignorar\nconst status_alert = status >= 500\n    ? `\\nALERTA CRÍTICA — STATUS ${status}: El servidor respondió con un error estructural. La gravedad ES ROJO independientemente de la latencia. Diagnostica el fallo del servidor, no la latencia.`\n    : status >= 400\n    ? `\\nADVERTENCIA — STATUS ${status}: El cliente envió una petición incorrecta o no autorizada. Investigar causa.`\n    : panic_mode\n    ? `\\nMODO PÁNICO ACTIVADO: Intervención manual solicitada. Tratar como ROJO independientemente de métricas.`\n    : \"\";\n\nconst totalChecks = history.length;\nlet uptimePercent, avgLatency;\n\nif (totalChecks <= 1) {\n    uptimePercent = \"100% (Calibración Inicial)\";\n    avgLatency = \"N/A\";\n} else {\n    const successes = history.filter(h => h.json.is_success === true).length;\n    uptimePercent = `${((successes / totalChecks) * 100).toFixed(2)}%`;\n    const latencies = history.map(h => h.json.latency_ms).filter(l => l > 0);\n    avgLatency = latencies.length > 0\n        ? `${(latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(0)}ms`\n        : \"N/A\";\n}\n\nconst lastFive = history.slice(0, 5).map(h => h.json.latency_ms).filter(l => l > 0);\nconst recentAvg = lastFive.length > 0\n    ? lastFive.reduce((a, b) => a + b, 0) / lastFive.length\n    : latency_ms;\nconst avgNum = parseFloat(avgLatency) || latency_ms;\nconst trend = recentAvg > avgNum * 1.3 ? \"DEGRADANDO\"\n    : recentAvg < avgNum * 0.7 ? \"MEJORANDO\"\n    : \"ESTABLE\";\n\n// CORRECCIÓN 3: historial reciente contrasta con el status actual\nconst historialReciente = history.slice(0, 5);\nconst fallosRecientes = historialReciente.filter(h => !h.json.is_success).length;\nconst contexto_historico = fallosRecientes > 0\n    ? `Atención: ${fallosRecientes} de los últimos 5 checks también fallaron — patrón CRÓNICO probable.`\n    : status >= 500\n    ? `Nota: Los últimos checks históricos eran exitosos — este fallo es AGUDO o puntual.`\n    : `Historial limpio — rendimiento consistente.`;\n\nconst evidence_type = response_evidence\n    ? \"PAYLOAD_REAL — respuesta JSON verificada\"\n    : \"SOLO_CONECTIVIDAD — respuesta HTML/Redirección\";\n\nconst source = trigger.source || \"AUTO_SENSOR\";\nconst context_note = source === \"USER_TRIGGERED\"\n    ? `\\nCONTEXTO CRÍTICO: El usuario está viendo ${latency_ms}ms en su dashboard y preguntó por ese valor. Compara ese número con el promedio histórico (${avgLatency}). Dile explícitamente si es normal o una anomalía para este endpoint y por qué.`\n    : \"\";\n\nconst system_instruction = `Eres el Dr. SRE — Hybrid Forensic Surgeon. Diagnosticas APIs para CEO y Senior Developers.\n${status_alert}\n${context_note}\nMETODOLOGÍA DIAGNOSTA:\n- Cero real HTTPS: ~300ms (TCP+TLS/SSL+Servidor). No es lag si está cerca de este valor.\n- ATLETA <300ms · NORMAL <600ms · FATIGADO <1200ms · UCI >1200ms.\n- Si latency_ms > 3000ms: considera congestión en nodo local (Docker/WSL2) antes de culpar al servidor.\n- STATUS HTTP manda sobre latencia: un 500 con 50ms ES un fallo crítico. La latencia baja no lo mitiga.\n\nEVIDENCIA CAPTURADA:\n- Tipo: ${evidence_type}\n- Body: ${response_evidence ? JSON.stringify(response_evidence).substring(0, 300) : \"null\"}.\n- Contexto histórico: ${contexto_historico}\n\nREGLAS DE ORO:\n1. NARRATIVA DUAL: Metáfora médica breve + causa técnica cruda.\n2. TENDENCIA: Pulso actual ${latency_ms}ms vs histórico ${avgLatency}. Tendencia: ${trend}.\n3. FALSO POSITIVO: Si status=200 pero body contiene \"maintenance\" o \"error\", marca AMARILLO.\n4. STATUS PREVALECE: Si status >= 500, gravedad siempre ROJO. Si status >= 400, mínimo AMARILLO.\n5. CÓDIGO ACCIONABLE: Incluye comandos curl/kubectl para intervención inmediata.\n6. NOMBRES REALES: NOMBRES REALES: Usa ${endpoint_name} en lugar de \"endpoint\", \"API\" o \"nodo\".\n   En descripcion_humana NO uses saludos como \"Estimado paciente\". \n   Habla directo: \"CoinGecko responde en 690ms, 6.8x más lento que su promedio de 101ms.\"\n\nSALIDA JSON ESTRICTO — sin markdown, sin bloques de código:\n{\n  \"resumen_clinico\": {\n    \"gravedad\": \"${gravedad}\",\n    \"titulo_diagnostico\": \"...\",\n    \"descripcion_humana\": \"...\",\n    \"requiere_humano\": ${requiere_humano}\n  },\n  \"analisis_tecnico\": {\n    \"causa_raiz_probable\": \"...\",\n    \"causa_diferencial\": \"...\",\n    \"destinatario\": \"DEVOPS | DBA | DEVELOPER | AUTOMATICO\",\n    \"patron_historico\": \"AGUDO | CRONICO | INTERMITENTE\",\n    \"tendencia\": \"${trend}\"\n  },\n  \"protocolo_intervencion\": [{ \"paso\": 1, \"tipo\": \"...\", \"accion\": \"...\", \"comando\": \"...\" }],\n  \"pronostico\": { \"tiempo_recuperacion\": \"...\", \"impacto_negocio\": \"...\" },\n  \"firma\": \"Dr. SRE - ${new Date().toISOString()}\"\n}`;\n\nreturn {\n    id: trigger.id,\n    trace_id: trigger.trace_id,\n    system_instruction: system_instruction,\n    // CORRECCIÓN 4: prompt_input incluye status explícito — antes no lo tenía\n    prompt_input: `CASO CLÍNICO: ${health_category}. STATUS HTTP: ${status}. LATENCIA: ${latency_ms}ms. UPTIME: ${uptimePercent}. TENDENCIA: ${trend}. GRAVEDAD CALCULADA: ${gravedad}.${panic_mode ? \" ATENCIÓN: MODO PÁNICO ACTIVADO MANUALMENTE — no diagnosticar por métricas.\" : \"\"}`,\n    epidemiology_report: {\n        uptime_score: uptimePercent,\n        avg_latency: avgLatency,\n        health_category: health_category,\n        gravedad: gravedad,\n        trend: trend,\n        evidence_type: evidence_type,\n        evidence_captured: !!response_evidence,\n        fallos_recientes: fallosRecientes,\n        panic_mode: panic_mode,\n        trend_status: status >= 500 ? \"CRITICAL\" : status >= 400 ? \"WARNING\" : \"STABLE\",\n        captured_at: new Date().toISOString(),\n        recent_history: history.slice(0, 10).map(h => h.json)\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -192
+      ],
+      "id": "bef3099b-1c80-47ff-9c48-2e2baf10c163",
+      "name": "ProcesadorForenseUniversal1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const procesador = $('ProcesadorForenseUniversal').item.json;\nconst trigger = $('Execute Workflow Trigger').item.json;\nconst epi = procesador.epidemiology_report;\n\nconst latency_ms = trigger.vital_signs.latency_ms;\nconst endpoint_name = trigger.name || \"Endpoint Desconocido\";\nconst avg_num = epi.avg_num || latency_ms;\nconst history = epi.raw_history || [];\nconst allLatencies = history.map(h => h.latency_ms).filter(l => l > 0);\n\n// ── CÁLCULOS ESTADÍSTICOS ────────────────────────────────────────\n\nconst min_lat = allLatencies.length ? Math.min(...allLatencies) : latency_ms;\nconst max_lat = allLatencies.length ? Math.max(...allLatencies) : latency_ms;\n\n// Desviación estándar\nconst variance = allLatencies.length > 1\n    ? allLatencies.reduce((acc, v) => acc + Math.pow(v - avg_num, 2), 0) / allLatencies.length\n    : 0;\nconst std_dev = Math.round(Math.sqrt(variance));\nconst estabilidad_label = std_dev < 50 ? \"MUY ESTABLE\"\n    : std_dev < 100 ? \"ESTABLE\"\n    : std_dev < 200 ? \"VARIABLE\"\n    : \"MUY VARIABLE\";\n\n// Percentil del valor actual\nconst menores = allLatencies.filter(l => l <= latency_ms).length;\nconst percentil = allLatencies.length > 0\n    ? Math.round((menores / allLatencies.length) * 100)\n    : 50;\nconst percentil_label = percentil <= 25 ? \"excelente (top 25% más rápido)\"\n    : percentil <= 50 ? \"bueno (por debajo de la mediana)\"\n    : percentil <= 75 ? \"moderado (por encima de la mediana)\"\n    : \"elevado (top 25% más lento)\";\n\n// Tendencia real con velocidad (3 más recientes vs 3 más antiguos)\nconst ultimas3 = allLatencies.slice(0, 3);\nconst primeras3 = allLatencies.slice(-3);\nconst avg_u = ultimas3.length ? ultimas3.reduce((a,b)=>a+b,0)/ultimas3.length : avg_num;\nconst avg_p = primeras3.length ? primeras3.reduce((a,b)=>a+b,0)/primeras3.length : avg_num;\nconst trend_real = avg_u > avg_p * 1.3 ? \"DEGRADANDO\"\n    : avg_u < avg_p * 0.7 ? \"MEJORANDO\"\n    : \"ESTABLE\";\nconst velocidad_cambio = Math.round(Math.abs(avg_u - avg_p));\nconst trend_desc = trend_real === \"DEGRADANDO\"\n    ? `DEGRADANDO (+${velocidad_cambio}ms respecto a mediciones anteriores)`\n    : trend_real === \"MEJORANDO\"\n    ? `MEJORANDO (-${velocidad_cambio}ms respecto a mediciones anteriores)`\n    : \"ESTABLE\";\n\n// Racha actual sobre umbral\nconst health = epi.health_category || \"NORMAL\";\nconst umbral = health === \"ATLETA\" ? 300 : health === \"NORMAL\" ? 600 : 1200;\nlet racha_actual = 0;\nfor (const h of history) {\n    if (h.latency_ms > umbral) racha_actual++;\n    else break;\n}\n\n// Comparación vs promedio\nconst diff_vs_avg = latency_ms - avg_num;\nconst pct_vs_avg = avg_num > 0\n    ? Math.round((diff_vs_avg / avg_num) * 100)\n    : 0;\nconst comparacion = diff_vs_avg > 0\n    ? `${pct_vs_avg}% SOBRE su promedio histórico`\n    : `${Math.abs(pct_vs_avg)}% BAJO su promedio histórico`;\n\n// Análisis horario — ¿hay patrón en cierta hora?\nconst horasPico = history\n    .filter(h => h.latency_ms > avg_num * 1.5)\n    .map(h => new Date(h.checked_at).getHours());\nconst horaFrecuente = horasPico.length > 2\n    ? horasPico.sort((a,b) =>\n        horasPico.filter(v => v===b).length - horasPico.filter(v => v===a).length\n      )[0]\n    : null;\nconst patron_horario = horaFrecuente !== null\n    ? `Picos de latencia frecuentes alrededor de las ${horaFrecuente}:00h.`\n    : \"Sin patrón horario de degradación detectado.\";\n\n// Comparación 2h vs total\nconst hace2h = new Date(Date.now() - 2 * 60 * 60 * 1000);\n\n\nconst ultimas2h = history.filter(h => new Date(h.checked_at) > hace2h);\nconst todas_2h = [{ latency_ms: latency_ms }, ...ultimas2h];\nconst avg_2h = Math.round(todas_2h.reduce((a, b) => a + b.latency_ms, 0) / todas_2h.length);\n\nconst comparacion_2h = avg_2h > avg_num * 1.2\n    ? `Últimas 2h (${avg_2h}ms) están un ${Math.round(((avg_2h-avg_num)/avg_num)*100)}% por encima del promedio histórico — posible degradación reciente.`\n    : avg_2h < avg_num * 0.8\n    ? `Últimas 2h (${avg_2h}ms) están un ${Math.round(((avg_num-avg_2h)/avg_num)*100)}% por debajo del promedio — mejora reciente.`\n    : `Últimas 2h (${avg_2h}ms) consistentes con el promedio histórico (${avg_num}ms).`;\n\n\n// ── ENRIQUECER EL PROMPT ─────────────────────────────────────────\nconst prompt_input = procesador.prompt_base + `\n\nANÁLISIS ESTADÍSTICO (Dr. Junior):\n- Mínimo histórico: ${min_lat}ms | Máximo: ${max_lat}ms\n- Desviación estándar: ${std_dev}ms (${estabilidad_label})\n- Percentil actual: ${percentil}% — ${percentil_label}\n- Tendencia refinada: ${trend_desc}\n- Racha sobre umbral: ${racha_actual} checks consecutivos\n- Valor actual ${comparacion}\n- ${comparacion_2h}\n- ${patron_horario}`;\n\n// ── ANALISIS_JUNIOR para ProtocoloAuxilio y RespuestaSano ────────\nconst analisis_junior = {\n    endpoint_name: endpoint_name,\n    min_latency: min_lat,\n    max_latency: max_lat,\n    avg_calculado: avg_num,\n    std_dev: std_dev,\n    estabilidad: estabilidad_label,\n    percentil: percentil,\n    percentil_label: percentil_label,\n    tendencia_real: trend_real,\n    velocidad_cambio_ms: velocidad_cambio,\n    trend_desc: trend_desc,\n    racha_sobre_umbral: racha_actual,\n    pct_vs_avg: pct_vs_avg,\n    comparacion: comparacion,\n    comparacion_2h: comparacion_2h,\n    patron_horario: patron_horario,\n    avg_2h: avg_2h\n};\n\n// ── OUTPUT COMPLETO ──────────────────────────────────────────────\nreturn {\n    id: procesador.id,\n    trace_id: procesador.trace_id,\n    system_instruction: procesador.system_instruction,\n    prompt_input: prompt_input,\n    epidemiology_report: {\n      ...epi,\n      health_category: health,\n      gravedad: epi.gravedad,\n      analisis_junior: analisis_junior\n    }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "71eb77bb-c103-4f7a-b145-2951ddd65470",
+      "name": "DrJunior",
+      "notes": " Responsabilidad: CALCULAR y ENRIQUECER\n  • min/max del historial\n  • desviación estándar\n  • percentil del valor actual\n  • velocidad de degradación\n  • hora del pico (análisis horario)\n  • racha actual sobre umbral\n  • comparación 2h vs 24h (si hay suficiente historial)\n  • enriquecer el prompt_input con estos datos\n  • construir analisis_junior para ProtocoloAuxilio y RespuestaSano"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "97b5a364-4f25-4c6f-95c3-5c8479486d26",
+                    "leftValue": "={{ \n  $node[\"Execute Workflow Trigger\"].json.vital_signs.status_code == 200 && \n  $node[\"Execute Workflow Trigger\"].json.vital_signs.latency_ms < 600 && \n  !($node[\"Execute Workflow Trigger\"].json.panic_mode || false)\n}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sano"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "32e5e719-5590-4c12-88d1-56f8ec41f5d2",
+                    "leftValue": "={{true}}",
+                    "rightValue": "={{ 200 }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2.5 pro"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -496,
+        -208
+      ],
+      "id": "193154f3-603c-4d0d-a1ca-3cfa36e7c193",
+      "name": "TriajeDeGravedad1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Recuperamos las entradas de los nodos anteriores\nconst recipe = $('FormatearRecipe').item.json;\nconst firma = $('Generar Firma HMAC').item.json;\nconst trigger = $('Execute Workflow Trigger').item.json;\n\n// 2. Copia profunda para romper referencias y limpiar el payload\nconst epi_limpio = JSON.parse(JSON.stringify(recipe.epidemiology_report));\n\n// 3. Eliminación del historial pesado para proteger los 2GB de RAM del servidor\nif (epi_limpio.raw_history) {\n  delete epi_limpio.raw_history;\n}\n\n// 4. RETORNO OBLIGATORIO: n8n exige un Array de items con la llave \"json\"\nreturn [\n  {\n    json: {\n      type: \"DIAGNOSTICO_NEW\",\n      data: {\n        id: recipe.id,\n        trace_id: recipe.trace_id,\n        name: trigger.name || null,\n        url: trigger.url || null,\n        ai_recipe: recipe.ai_recipe,\n        epidemiology_report: epi_limpio, // Ya sin raw_history\n        ai_provider: recipe.ai_provider,\n        job_id: recipe.trace_id ? recipe.trace_id.split('_')[0] : \"manual-job\",\n        _internal: recipe._internal\n      },\n      signature: firma.signature,\n      timestamp: firma.timestamp\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        -192
+      ],
+      "id": "516938a4-8434-4967-b4e2-51cc8e85e14d",
+      "name": "PrepararPush"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt_input }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "={{ $json.system_instruction }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        -560
+      ],
+      "id": "79d00781-90b6-4f2a-bdef-644412085d70",
+      "name": "Message a model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "PeS3GTM8xbLb4Zfe",
+          "name": "DiagnostaGEMINI"
+        }
+      },
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {
+    "Execute Workflow Trigger": [
+      {
+        "json": {
+          "id": "ef2d90f2-b004-4cfe-872d-d0bf54c947de",
+          "name": "Hackathon API",
+          "vital_signs": {
+            "status_code": 200,
+            "latency_ms": 316,
+            "response_preview": "OK"
+          },
+          "job_id": "bb41773b-59bf-4cf7-9bec-22c53eb79ae4",
+          "trace_id": "bb41773b-59bf-4cf7-9bec-22c53eb79ae4_ef2d90f2-b004-4cfe-872d-d0bf54c947de",
+          "source": "USER_TRIGGERED",
+          "_internal": {
+            "verified_at": "2026-03-31T01:21:05.800Z"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Postgres (Historial)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres (Historial)": {
+      "main": [
+        [
+          {
+            "node": "ProcesadorForenseUniversal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TriajeDeGravedad": {
+      "main": [
+        [
+          {
+            "node": "RespuestaSano",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "FormatearRecipe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FormatearRecipe": {
+      "main": [
+        [
+          {
+            "node": "Generar Firma HMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GroqHTTP_Request": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "HTTP Request (PUSH FIFO)": {
+      "main": [
+        []
+      ]
+    },
+    "Generar Firma HMAC": {
+      "main": [
+        [
+          {
+            "node": "PrepararPush",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcesadorForenseUniversal": {
+      "main": [
+        [
+          {
+            "node": "DrJunior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RespuestaSano": {
+      "main": [
+        [
+          {
+            "node": "FormatearRecipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProtocoloAuxilio": {
+      "main": [
+        [
+          {
+            "node": "FormatearRecipe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "GroqHTTP_Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DrJunior": {
+      "main": [
+        [
+          {
+            "node": "TriajeDeGravedad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PrepararPush": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (PUSH FIFO)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model2": {
+      "main": [
+        [
+          {
+            "node": "FormatearRecipe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ProtocoloAuxilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "37f02939-deec-418f-8ec4-6120a88b4f8c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "37cdecdb87cee3f600519c8ff2cba0dada7a9d312bf361fc18fc14968c58eb2f"
+  },
+  "id": "YumIBNfbi1U5pNDk",
+  "tags": []
+}
