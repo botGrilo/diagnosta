@@ -56,36 +56,52 @@ Para optimizar recursos en nuestro servidor Nano, diseñamos una **Arquitectura 
 <div align="center">
 
 ### 🏠 Bienvenido a la Clínica — Landing Page
-![Landing Page](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/1.png)
 *La puerta de entrada a Diagnosta. Presenta la propuesta de valor antes de acceder al sistema.*
 
+![Landing Page](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/1.png)
+
+
 ### 🖥️ Panel de Control
-![Panel de Control](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/2.png)
 *Centro de mando principal. Visión global del estado de todos tus pacientes (APIs) en tiempo real.*
 
+![Panel de Control](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/2.png)
+
+
 ### 🌐 Red Global de Monitoreo
-![Red Global](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/3.png)
 *Mapa de conectividad y estado de los endpoints monitoreados a nivel global.*
 
+![Red Global](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/3.png)
+
+
 ### 🩻 Informe del Dr. Grilo
-![Informe del Dr. Grilo](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/4.png)
 *Diagnóstico generado por IA en lenguaje humano: qué falló, por qué ocurrió y cómo curarlo.*
 
+![Informe del Dr. Grilo](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/4.png)
+
+
 ### ⚙️ Alta de Paciente — Configuración de APIs del Cliente
-![Alta de Paciente](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/5.png)
 *Formulario de ingreso donde el cliente registra las APIs que desea monitorear.*
 
+![Alta de Paciente](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/5.png)
+
+
 ### 👁️ Ayudas Visuales — Modo Guía
-![Ayudas Visuales](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/6.png)
 *Interruptor para activar o desactivar las anotaciones visuales en pantalla.*
 
+![Ayudas Visuales](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/6.png)
+
+
 ### 🫀 Pilares de Referencia — Vista Compacta
-![Pilares de Referencia](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/7.png)
 *Panel para mostrar u ocultar los 6 Pilares de referencia que sirven como línea base de salud.*
 
+![Pilares de Referencia](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/7.png)
+
+
 ### 📅 Última Ronda Médica
-![Última Ronda Médica](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/8.png)
 *Registro de la última revisión automática. El Dr. Grilo pasa revista cada 5 minutos.*
+
+![Última Ronda Médica](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/8.png)
+
 
 </div>
 
