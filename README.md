@@ -55,16 +55,29 @@ Para optimizar recursos en nuestro servidor Nano, diseñamos una **Arquitectura 
 
 <div align="center">
 
-|                                                                                                       |                                                                                                         |
-| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| ![Dashboard principal](https://github.com/botGrilo/diagnosta/blob/main/assets/1.png)                  | ![Estado de pacientes](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_2.png)   |
-| _Sala de Monitoreo — Vista general_                                                                   | _Constantes Vitales en tiempo real_                                                                     |
-| ![Expediente clínico](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_3.png)  | ![Gráfica de latencia](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_4.png)   |
-| _Expediente Clínico — Historial de salud_                                                             | _Radiografía de latencia con anomalías_                                                                 |
-| ![Diagnóstico de IA](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_5.png)   | ![Informe del Dr. Grilo](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_6.png) |
-| _Nivel Ámbar — Gemini Flash en análisis_                                                              | _Informe de Quirófano — Dr. Grilo diagnostica_                                                          |
-| ![Status page pública](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_7.png) | ![Chaos Engineering](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/IMAGEN_8.png)     |
+### Sala de Monitoreo
+![Sala de Monitoreo](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/1.png)
 
+### Constantes Vitales
+![Constantes Vitales](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/2.png)
+
+### Expediente Clínico
+![Expediente Clínico](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/3.png)
+
+### Radiografía de Latencia
+![Radiografía de Latencia](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/4.png)
+
+### Nivel Ámbar — Gemini Flash
+![Nivel Ámbar](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/5.png)
+
+### Informe de Quirófano
+![Informe del Dr. Grilo](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/6.png)
+
+### Status Page Pública
+![Status Page](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/7.png)
+
+### Chaos Engineering
+![Chaos Engineering](https://raw.githubusercontent.com/botGrilo/diagnosta/main/assets/8.png)
 </div>
 
 ---
