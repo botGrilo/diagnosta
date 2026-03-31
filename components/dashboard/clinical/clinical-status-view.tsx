@@ -47,7 +47,18 @@ export function ClinicalStatusView({ status, isLoadingAi, compact = false }: Cli
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <div className="cursor-pointer group/card h-full">
+        <div 
+          role="button"
+          tabIndex={0}
+          className="cursor-pointer group/card h-full w-full text-left bg-transparent border-none p-0 block appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-[2.5rem]"
+          aria-label={`Ver detalles forenses de ${status.name}`}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.currentTarget.click();
+            }
+          }}
+        >
           <ClinicalRecipeCard is_critical={ia?.resumen_clinico.gravedad === 'ROJO'}>
             {/* ── LAYOUT HORIZONTAL en desktop, vertical en mobile ── */}
             <div className="p-6 lg:p-8 animate-in fade-in zoom-in-95 duration-700 relative h-full">
