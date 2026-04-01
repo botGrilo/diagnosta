@@ -140,6 +140,12 @@ Diagnosta está diseñado para ser **resiliente en entornos limitados**:
 
 ---
 
+# V I D E O     D E M O   
+
+[![Ver demo en YouTube](https://img.youtube.com/vi/sXx-ZUWwUrQ/maxresdefault.jpg)](https://youtu.be/sXx-ZUWwUrQ?si=ZuSh9Rxh49NTKr79)
+
+---
+
 <div align="center">
 
 _Hecho con 🩺 por [José Grillo](https://josegrillo.vercel.app/)_
