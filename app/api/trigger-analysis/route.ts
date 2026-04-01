@@ -23,7 +23,8 @@ export async function POST(req: NextRequest) {
       .digest('hex');
 
     // ── DISPARO A N8N ──────────────────────────────────
-    const targetUrl = 'https://n8n.000253.xyz/webhook/diagnostico-global-maestro';
+    // const targetUrl = 'https://n8n.000253.xyz/webhook/diagnostico-global-maestro';
+    const targetUrl = 'https://n8n.botgrilo.es/webhook/diagnostico-global-maestro';
     
     const response = await fetch(targetUrl, {
       method: 'POST',
