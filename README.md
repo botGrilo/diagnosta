@@ -1,3 +1,27 @@
+# 🛡️ Diagnosta: El Guardián Inteligente de APIs
+
+> **Proyecto oficial para la Hackaton CubePath 2026** > "No solo te dice que tu API cayó. Te dice por qué y cuándo volverá a pasar."
+
+
+
+## 🚀 [PROBAR DEMO EN VIVO AQUÍ](https://diagnosta.botgrilo.es/)
+---
+
+## ✨ ¿Qué hace Diagnosta?
+Diagnosta es una clínica digital para tus servicios. Mientras otros monitores solo te dan un error numérico, nosotros usamos **IA Forense (Claude API)** para analizar el historial y darte un diagnóstico humano en español.
+
+## 🛠️ Stack Técnico
+- **Frontend:** Next.js + shadcn/ui (Desplegado en CubePath)
+- **Base de Datos:** PostgreSQL (CubePath VPS)
+- **Motor de Pings:** n8n (Worker automático)
+- **Cerebro:** Claude 3.5 Sonnet & Haiku para diagnósticos predictivos.
+
+## 📦 Despliegue en CubePath
+Este proyecto corre íntegramente en un **VPS Nano de CubePath**.  
+Usamos **Docploy** para el autodeploy desde GitHub y la gestión de variables de entorno.
+
+
+
 <div align="center">
 
 # 🛡️ Diagnosta
